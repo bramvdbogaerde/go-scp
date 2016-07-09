@@ -14,6 +14,7 @@ type Client struct {
 	Session      *ssh.Session
 }
 
+// Connects to the remote SSH server, returns error if it couldn't establisch a session to the SSH server
 func (a *Client) Connect() error {
 	client, err := ssh.Dial("tcp", a.Host, a.ClientConfig)
 	if err != nil {
@@ -27,6 +28,7 @@ func (a *Client) Connect() error {
 	return nil
 }
 
+// Copies the contents of an io.Reader to a remote location
 func (a *Client) CopyFile(fileReader io.Reader, remotePath string, permissions string) {
 	contents_bytes, _ := ioutil.ReadAll(fileReader)
 	contents := string(contents_bytes)
