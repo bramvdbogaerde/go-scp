@@ -14,7 +14,7 @@ type Client struct {
 	Session      *ssh.Session
 }
 
-// Connects to the remote SSH server, returns error if it couldn't establisch a session to the SSH server
+// Connects to the remote SSH server, returns error if it couldn't establish a session to the SSH server
 func (a *Client) Connect() error {
 	client, err := ssh.Dial("tcp", a.Host, a.ClientConfig)
 	if err != nil {
