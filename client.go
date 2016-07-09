@@ -28,7 +28,8 @@ func (a *Client) Connect() error {
 }
 
 func (a *Client) CopyFile(fileReader io.Reader, remotePath string, permissions string) {
-	contents := string(ioutil.ReadAll(fileReader))
+	contents_bytes, _ := ioutil.ReadAll(fileReader)
+	contents := string(contents_bytes)
 	filename := path.Base(remotePath)
 	directory := path.Dir(remotePath)
 
