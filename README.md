@@ -13,21 +13,15 @@ package main
 import(
 	"fmt"
 	"os"
-	"golang.org/x/crypto/ssh"
+	"github.com/bramvdbogaerde/go-scp/auth"
 	"github.com/bramvdbogaerde/go-scp"
 )
 
 func main(){
-	// look at the documentation of crypto/ssh package for more information of how to provide credentials for authentication
-	private_key := []byte("contents of my private key")
-	signer, _ := ssh.ParsePrivateKey(private_key)
-
-	clientConfig := ssh.ClientConfig{
-		User: "user",
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),	
-		},
-	}
+	// Use SSH key authentication from the auth package
+	clientConfig, _ := auth.PrivateKey("username", "/path/to/rsa/key")
+	
+	// For other authentication methods see ssh.ClientConfig and ssh.AuthMethod
 
 	// Create a new SCP client
 	client := scp.NewClient("example.com:22", &clientConfig)
