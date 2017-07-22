@@ -2,10 +2,11 @@ package scp
 
 import (
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"io"
-	"io/ioutil"
+	"os"
 	"path"
+
+	"golang.org/x/crypto/ssh"
 )
 
 type Client struct {
@@ -28,18 +29,17 @@ func (a *Client) Connect() error {
 	return nil
 }
 
-// Copies the contents of an io.Reader to a remote location
-func (a *Client) CopyFile(fileReader io.Reader, remotePath string, permissions string) {
-	contents_bytes, _ := ioutil.ReadAll(fileReader)
-	contents := string(contents_bytes)
+// Copies the contents of an os.File to a remote location
+func (a *Client) CopyFile(file *os.File, remotePath string, permissions string) {
 	filename := path.Base(remotePath)
 	directory := path.Dir(remotePath)
+	stat, _ := file.Stat()
 
 	go func() {
 		w, _ := a.Session.StdinPipe()
 		defer w.Close()
-		fmt.Fprintln(w, "C"+permissions, len(contents), filename)
-		fmt.Fprintln(w, contents)
+		fmt.Fprintln(w, "C"+permissions, stat.Size(), filename)
+		io.Copy(w, file)
 		fmt.Fprintln(w, "\x00")
 	}()
 
