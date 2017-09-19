@@ -1,19 +1,20 @@
 package auth
 
 import (
-	"golang.org/x/crypto/ssh"
 	"io/ioutil"
+
+	"golang.org/x/crypto/ssh"
 )
 
-// Loads a private and public key from "path" and returns a SSH ClientConfig to authenticate with the server
-func PrivateKey(username string, path string) (ssh.ClientConfig, error) {
-	private_key, err := ioutil.ReadFile(path)
+//PrivateKey Loads a private and public key from "path" and returns a SSH ClientConfig to authenticate with the server
+func PrivateKey(username string, path string, keyCallBack ssh.HostKeyCallback) (ssh.ClientConfig, error) {
+	privateKey, err := ioutil.ReadFile(path)
 
 	if err != nil {
 		return ssh.ClientConfig{}, err
 	}
 
-	signer, err := ssh.ParsePrivateKey(private_key)
+	signer, err := ssh.ParsePrivateKey(privateKey)
 
 	if err != nil {
 		return ssh.ClientConfig{}, err
@@ -24,5 +25,6 @@ func PrivateKey(username string, path string) (ssh.ClientConfig, error) {
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
+		HostKeyCallback: keyCallBack,
 	}, nil
 }
