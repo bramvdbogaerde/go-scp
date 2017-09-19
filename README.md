@@ -15,11 +15,13 @@ import(
 	"os"
 	"github.com/bramvdbogaerde/go-scp/auth"
 	"github.com/bramvdbogaerde/go-scp"
+        "golang.org/x/crypto/ssh"
 )
 
 func main(){
 	// Use SSH key authentication from the auth package
-	clientConfig, _ := auth.PrivateKey("username", "/path/to/rsa/key")
+        // we ignore the host key in this example, please change this if you use this library
+	clientConfig, _ := auth.PrivateKey("username", "/path/to/rsa/key", ssh.InsecureIgnoreHostKey())
 	
 	// For other authentication methods see ssh.ClientConfig and ssh.AuthMethod
 
