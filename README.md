@@ -15,7 +15,7 @@ import(
 	"os"
 	"github.com/bramvdbogaerde/go-scp/auth"
 	"github.com/bramvdbogaerde/go-scp"
-        "golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh"
 )
 
 func main(){
