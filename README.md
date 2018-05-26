@@ -12,8 +12,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/heicat/go-scp"
-	"github.com/heicat/go-scp/auth"
+	"github.com/bramvdbogaerde/go-scp/auth"
+	"github.com/bramvdbogaerde/go-scp"
 	"golang.org/x/crypto/ssh"
 	"os"
 )
