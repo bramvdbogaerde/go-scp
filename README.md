@@ -12,8 +12,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/bramvdbogaerde/go-scp"
-	"github.com/bramvdbogaerde/go-scp/auth"
+	"github.com/heicat/go-scp"
+	"github.com/heicat/go-scp/auth"
 	"golang.org/x/crypto/ssh"
 	"os"
 )
@@ -48,5 +48,8 @@ func main() {
 	// Usage: CopyFile(fileReader, remotePath, permission)
 
 	client.CopyFile(f, "/path/to/remote/file", "0655")
+
+	//Add a new method to copy from remote to local file
+	client.CopyFromRemote(f, "/path/to/remote/file")
 }
 ```

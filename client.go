@@ -60,3 +60,16 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 
 	a.Session.Run("/usr/bin/scp -t " + directory)
 }
+
+// copy from remote file to local
+func (a *Client) CopyFromRemote(file *os.File, remotePath string) {
+
+	r, err := a.Session.Output("dd if=" + remotePath)
+	if err != nil {
+		fmt.Printf("error reading from remote stdout: %s", err)
+	}
+	defer a.Session.Close()
+	//write to local file
+	file.Write(r)
+
+}
