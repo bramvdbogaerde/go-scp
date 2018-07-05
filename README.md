@@ -38,8 +38,8 @@ func main() {
 	// Open a file
 	f, _ := os.Open("/path/to/local/file")
 
-	// Close session after the file has been copied
-	defer client.Session.Close()
+	// Close client connection after the file has been copied
+	defer client.Close()
 
 	// Close the file after it has been copied
 	defer f.Close()
