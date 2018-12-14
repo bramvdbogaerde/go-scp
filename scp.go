@@ -14,9 +14,13 @@ import (
 
 // Returns a new scp.Client with provided host and ssh.clientConfig
 func NewClient(host string, config *ssh.ClientConfig) Client {
+	return NewClientWithTimeout(host, config, time.Minute)
+}
+
+func NewClientWithTimeout(host string, config *ssh.ClientConfig, timeout time.Duration) Client {
 	return Client{
 		Host:         host,
 		ClientConfig: config,
-		Timeout:      time.Minute,
+		Timeout:      timeout,
 	}
 }
