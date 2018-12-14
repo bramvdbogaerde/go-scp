@@ -47,7 +47,11 @@ func main() {
 	// Finaly, copy the file over
 	// Usage: CopyFile(fileReader, remotePath, permission)
 
-	client.CopyFile(f, "/path/to/remote/file", "0655")
+	err = client.CopyFile(f, "/home/server/test.txt", "0655")
+
+	if err != nil {
+		fmt.Println("Error while copying file ", err)
+	}
 }
 ```
 
