@@ -33,3 +33,14 @@ func PrivateKey(username string, path string, keyCallBack ssh.HostKeyCallback) (
 		HostKeyCallback: keyCallBack,
 	}, nil
 }
+
+func PasswordKey(username string, password string, keyCallBack ssh.HostKeyCallback)(ssh.ClientConfig, error) {
+	
+	return ssh.ClientConfig{
+		User: username,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(password),
+		},
+		HostKeyCallback: keyCallBack,
+	}, nil
+}
