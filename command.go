@@ -2,23 +2,26 @@ package scp
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 )
 
 // Command represents a SCP command sent to or from the remote system
 type Command struct {
-	Permissions int
+	Permissions os.FileMode
 	Size        uint
 	Filename    string
 }
 
 // MarshalText implements the TextMarshaler interface
 func (c *Command) MarshalText() (text []byte, err error) {
-	perms := strconv.Itoa(c.Permissions)
-	size := strconv.Itoa(int(c.Size))
+	if c.Permissions > os.ModePerm {
+		return nil, fmt.Errorf("bad permissions %o (0%d)", c.Permissions, c.Permissions)
+	}
+	perm := strconv.FormatInt(int64(c.Permissions), 8)
 
-	return []byte(fmt.Sprintf("C%s %s %s", perms, size, c.Filename)), nil
+	return []byte(fmt.Sprintf("C0%s %d %s", perm, c.Size, c.Filename)), nil
 }
 
 // UnmarshalText implements the TextUnmarshaler interface
@@ -27,10 +30,10 @@ func (c *Command) UnmarshalText(text []byte) error {
 	parts := strings.Split(strings.Trim(cmd, "\n\x00"), " ")
 
 	if len(parts) != 3 {
-		return fmt.Errorf("Command '%s' invalid", cmd)
+		return fmt.Errorf("Command '%s' is invalid", text)
 	}
 
-	perms, err := strconv.Atoi(parts[0][1:])
+	perms, err := strconv.ParseInt(parts[0][1:], 8, 64)
 	if err != nil {
 		return err
 	}
@@ -41,7 +44,7 @@ func (c *Command) UnmarshalText(text []byte) error {
 	}
 
 	*c = Command{
-		Permissions: perms,
+		Permissions: os.FileMode(perms),
 		Size:        uint(size),
 		Filename:    parts[2],
 	}
