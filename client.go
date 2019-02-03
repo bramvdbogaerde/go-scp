@@ -81,7 +81,7 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 }
 
 // CopyFromRemote copies the contents of a remote file into an io.Reader
-func (a *Client) CopyFromRemote(remotePath string) (io.Reader, int, error) {
+func (a *Client) CopyFromRemote(remotePath string) (io.Reader, os.FileMode, error) {
 	errCh := make(chan error, 2)
 
 	c := &Command{}
