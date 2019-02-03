@@ -142,6 +142,16 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 	directory := path.Dir(remotePath)
 	errCh := make(chan error, 2)
 
+	c, err := NewCommand(permissions, filename, uint64(size))
+	if err != nil {
+		return err
+	}
+
+	scpCmd, err := c.MarshalText()
+	if err != nil {
+		return err
+	}
+
 	syncFile := func(wg *sync.WaitGroup) {
 		defer wg.Done()
 
@@ -161,7 +171,7 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 		}
 		defer w.Close()
 
-		_, err = fmt.Fprintln(w, "C"+permissions, size, filename)
+		_, err = fmt.Fprintln(w, string(scpCmd))
 		if err != nil {
 			errCh <- err
 			return
