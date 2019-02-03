@@ -10,8 +10,21 @@ import (
 // Command represents a SCP command sent to or from the remote system
 type Command struct {
 	Permissions os.FileMode
-	Size        uint
+	Size        uint64
 	Filename    string
+}
+
+func NewCommand(permissions, filename string, size uint64) (*Command, error) {
+	p, err := strconv.ParseInt(permissions, 8, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Command{
+		Permissions: os.FileMode(p),
+		Filename:    filename,
+		Size:        size,
+	}, nil
 }
 
 // MarshalText implements the TextMarshaler interface
@@ -45,7 +58,7 @@ func (c *Command) UnmarshalText(text []byte) error {
 
 	*c = Command{
 		Permissions: os.FileMode(perms),
-		Size:        uint(size),
+		Size:        uint64(size),
 		Filename:    parts[2],
 	}
 
