@@ -1,6 +1,6 @@
 Copy files over SCP with Go
 =============================
-[![](https://godoc.org/github.com/bramvdbogaerde/go-scp?status.svg)](https://godoc.org/github.com/bramvdbogaerde/go-scp)
+[![Go Report Card](https://goreportcard.com/badge/bramvdbogaerde/go-scp)](https://goreportcard.com/report/bramvdbogaerde/go-scp) [![](https://godoc.org/github.com/bramvdbogaerde/go-scp?status.svg)](https://godoc.org/github.com/bramvdbogaerde/go-scp)
 
 This package makes it very easy to copy files over scp in Go.
 It uses the golang.org/x/crypto/ssh package to establish a secure connection to a remote server in order to copy the files via the SCP protocol.
