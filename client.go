@@ -19,11 +19,23 @@ import (
 )
 
 type Client struct {
-	Host         string
+	// the host to connect to
+	Host string
+
+	// the client config to use
 	ClientConfig *ssh.ClientConfig
-	Session      *ssh.Session
-	Conn         ssh.Conn
-	Timeout      time.Duration
+
+	// stores the SSH session while the connection is running
+	Session *ssh.Session
+
+	// stores the SSH connection itself in order to close it after transfer
+	Conn ssh.Conn
+
+	// the clients waits for the given timeout until given up the connection
+	Timeout time.Duration
+
+	// the absolute path to the remote SCP binary
+	RemoteBinary string
 }
 
 // Connects to the remote SSH server, returns error if it couldn't establish a session to the SSH server
@@ -112,7 +124,7 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 
 	go func() {
 		defer wg.Done()
-		err := a.Session.Run("/usr/bin/scp -qt " + directory)
+		err := a.Session.Run(fmt.Sprintf("%s -qt %s", a.RemoteBinary, directory))
 		if err != nil {
 			errCh <- err
 			return
