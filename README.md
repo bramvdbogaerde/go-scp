@@ -12,7 +12,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/bramvdbogaerde/go-scp"
+	scp "github.com/bramvdbogaerde/go-scp"
 	"github.com/bramvdbogaerde/go-scp/auth"
 	"golang.org/x/crypto/ssh"
 	"os"
