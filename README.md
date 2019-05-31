@@ -7,7 +7,7 @@ It uses the golang.org/x/crypto/ssh package to establish a secure connection to 
 
 ### Example usage
 
-```
+```go
 package main
 
 import (
@@ -31,7 +31,7 @@ func main() {
 	// Connect to the remote server
 	err := client.Connect()
 	if err != nil {
-		fmt.Println("Couldn't establisch a connection to the remote server ", err)
+		fmt.Println("Couldn't establish a connection to the remote server ", err)
 		return
 	}
 
