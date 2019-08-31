@@ -103,7 +103,6 @@ func checkResponse(r io.Reader) error {
 // Copies the contents of an io.Reader to a remote location
 func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size int64) error {
 	filename := path.Base(remotePath)
-	directory := path.Dir(remotePath)
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -158,7 +157,7 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 
 	go func() {
 		defer wg.Done()
-		err := a.Session.Run(fmt.Sprintf("%s -qt %s", a.RemoteBinary, directory))
+		err := a.Session.Run(fmt.Sprintf("%s -qt %s", a.RemoteBinary, remotePath))
 		if err != nil {
 			errCh <- err
 			return
