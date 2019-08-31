@@ -84,6 +84,22 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	}
 }
 
+// Checks the response it reads from the remote, and will return a single error in case
+// of failure
+func checkResponse(r io.Reader) error {
+	response, err := ParseResponse(r)
+	if err != nil {
+		return err
+	}
+
+	if response.IsFailure() {
+		return errors.New(response.GetMessage())
+	}
+
+	return nil
+
+}
+
 // Copies the contents of an io.Reader to a remote location
 func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size int64) error {
 	filename := path.Base(remotePath)
@@ -101,10 +117,23 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 			errCh <- err
 			return
 		}
+
 		defer w.Close()
+
+		stdout, err := a.Session.StdoutPipe()
+
+		if err != nil {
+			errCh <- err
+			return
+		}
 
 		_, err = fmt.Fprintln(w, "C"+permissions, size, filename)
 		if err != nil {
+			errCh <- err
+			return
+		}
+
+		if err = checkResponse(stdout); err != nil {
 			errCh <- err
 			return
 		}
@@ -117,6 +146,11 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 
 		_, err = fmt.Fprint(w, "\x00")
 		if err != nil {
+			errCh <- err
+			return
+		}
+
+		if err = checkResponse(stdout); err != nil {
 			errCh <- err
 			return
 		}
@@ -134,6 +168,7 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 	if waitTimeout(&wg, a.Timeout) {
 		return errors.New("timeout when upload files")
 	}
+
 	close(errCh)
 	for err := range errCh {
 		if err != nil {
