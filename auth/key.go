@@ -33,9 +33,28 @@ func PrivateKey(username string, path string, keyCallBack ssh.HostKeyCallback) (
 		HostKeyCallback: keyCallBack,
 	}, nil
 }
+func PrivateKeyWithPassphrase(username string, passpharase []byte, path string, keyCallBack ssh.HostKeyCallback) (ssh.ClientConfig, error) {
+	privateKey, err := ioutil.ReadFile(path)
 
-func PasswordKey(username string, password string, keyCallBack ssh.HostKeyCallback)(ssh.ClientConfig, error) {
-	
+	if err != nil {
+		return ssh.ClientConfig{}, err
+	}
+	signer, err := ssh.ParsePrivateKeyWithPassphrase(privateKey, passpharase)
+
+	if err != nil {
+		return ssh.ClientConfig{}, err
+	}
+
+	return ssh.ClientConfig{
+		User: username,
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		},
+		HostKeyCallback: keyCallBack,
+	}, nil
+}
+func PasswordKey(username string, password string, keyCallBack ssh.HostKeyCallback) (ssh.ClientConfig, error) {
+
 	return ssh.ClientConfig{
 		User: username,
 		Auth: []ssh.AuthMethod{
