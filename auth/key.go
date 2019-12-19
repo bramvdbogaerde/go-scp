@@ -7,8 +7,11 @@ package auth
 
 import (
 	"io/ioutil"
+	"net"
+	"os"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 )
 
 //PrivateKey Loads a private and public key from "path" and returns a SSH ClientConfig to authenticate with the server
@@ -50,6 +53,23 @@ func PrivateKeyWithPassphrase(username string, passpharase []byte, path string, 
 		User: username,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
+		},
+		HostKeyCallback: keyCallBack,
+	}, nil
+}
+
+func SshAgent(username string, keyCallBack ssh.HostKeyCallback) (ssh.ClientConfig, error) {
+	socket := os.Getenv("SSH_AUTH_SOCK")
+	conn, err := net.Dial("unix", socket)
+	if err != nil {
+		return ssh.ClientConfig{}, err
+	}
+
+	agentClient := agent.NewClient(conn)
+	return ssh.ClientConfig{
+		User: username,
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeysCallback(agentClient.Signers),
 		},
 		HostKeyCallback: keyCallBack,
 	}, nil
