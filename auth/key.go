@@ -1,4 +1,4 @@
-/* Copyright (c) 2018 Bram Vandenbogaerde
+/* Copyright (c) 2020 Bram Vandenbogaerde
  * You may use, distribute or modify this code under the
  * terms of the Mozilla Public License 2.0, which is distributed
  * along with the source code.
@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
-//PrivateKey Loads a private and public key from "path" and returns a SSH ClientConfig to authenticate with the server
+// PrivateKey Loads a private and public key from "path" and returns a SSH ClientConfig to authenticate with the server
 func PrivateKey(username string, path string, keyCallBack ssh.HostKeyCallback) (ssh.ClientConfig, error) {
 	privateKey, err := ioutil.ReadFile(path)
 
@@ -37,6 +37,7 @@ func PrivateKey(username string, path string, keyCallBack ssh.HostKeyCallback) (
 	}, nil
 }
 
+// Creates the configuration for a client that authenticates with a password protected private key
 func PrivateKeyWithPassphrase(username string, passpharase []byte, path string, keyCallBack ssh.HostKeyCallback) (ssh.ClientConfig, error) {
 	privateKey, err := ioutil.ReadFile(path)
 
@@ -58,6 +59,7 @@ func PrivateKeyWithPassphrase(username string, passpharase []byte, path string, 
 	}, nil
 }
 
+// Creates a configuration for a client that fetches public-private key from the SSH agent for authentication
 func SshAgent(username string, keyCallBack ssh.HostKeyCallback) (ssh.ClientConfig, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
 	conn, err := net.Dial("unix", socket)
@@ -75,6 +77,7 @@ func SshAgent(username string, keyCallBack ssh.HostKeyCallback) (ssh.ClientConfi
 	}, nil
 }
 
+// Creates a configuration for a client that authenticates using username and password
 func PasswordKey(username string, password string, keyCallBack ssh.HostKeyCallback) (ssh.ClientConfig, error) {
 
 	return ssh.ClientConfig{

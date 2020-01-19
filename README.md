@@ -60,4 +60,4 @@ func main() {
 This library is licensed under the Mozilla Public License 2.0.    
 A copy of the license is provided in the `LICENSE.txt` file.
 
-Copyright (c) 2018 Bram Vandenbogaerde
+Copyright (c) 2020 Bram Vandenbogaerde
