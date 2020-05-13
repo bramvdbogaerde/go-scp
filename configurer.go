@@ -7,8 +7,9 @@
 package scp
 
 import (
-	"golang.org/x/crypto/ssh"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // A struct containing all the configuration options
@@ -18,6 +19,7 @@ type ClientConfigurer struct {
 	clientConfig *ssh.ClientConfig
 	timeout      time.Duration
 	remoteBinary string
+	sudoPassword string
 }
 
 // Creates a new client configurer.
@@ -33,6 +35,7 @@ func NewConfigurer(host string, config *ssh.ClientConfig) *ClientConfigurer {
 		clientConfig: config,
 		timeout:      time.Minute,
 		remoteBinary: "scp",
+		sudoPassword: "",
 	}
 }
 
@@ -62,6 +65,12 @@ func (c *ClientConfigurer) ClientConfig(config *ssh.ClientConfig) *ClientConfigu
 	return c
 }
 
+func (c *ClientConfigurer) SudoPassword(password string) *ClientConfigurer {
+	c.sudoPassword = password
+	c.remoteBinary = "sudo -S scp"
+	return c
+}
+
 // Builds a client with the configuration stored within the ClientConfigurer
 func (c *ClientConfigurer) Create() Client {
 	return Client{
@@ -69,5 +78,6 @@ func (c *ClientConfigurer) Create() Client {
 		ClientConfig: c.clientConfig,
 		Timeout:      c.timeout,
 		RemoteBinary: c.remoteBinary,
+		SudoPassword: c.sudoPassword,
 	}
 }
