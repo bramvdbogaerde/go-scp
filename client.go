@@ -9,13 +9,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 type Client struct {
@@ -36,6 +37,8 @@ type Client struct {
 
 	// the absolute path to the remote SCP binary
 	RemoteBinary string
+
+	SudoPassword string
 }
 
 // Connects to the remote SSH server, returns error if it couldn't establish a session to the SSH server
@@ -107,24 +110,37 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	errCh := make(chan error, 2)
+	errCh := make(chan error, 3)
+	sudoCh := make(chan bool, 1)
+	w, err := a.Session.StdinPipe()
+	if err != nil {
+		return err
+	}
+	stdout, err := a.Session.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	if a.SudoPassword != "" {
+		go func() {
+			_, err := w.Write([]byte(a.SudoPassword + "\n"))
+			fmt.Println("wrote password to sudo")
+			if err != nil {
+				errCh <- fmt.Errorf("ssh sudo: could not provide sudo password")
+			}
+
+			sudoCh <- true
+			close(sudoCh)
+		}()
+	} else {
+		close(sudoCh)
+	}
 
 	go func() {
 		defer wg.Done()
-		w, err := a.Session.StdinPipe()
-		if err != nil {
-			errCh <- err
-			return
-		}
+		<-sudoCh
 
 		defer w.Close()
-
-		stdout, err := a.Session.StdoutPipe()
-
-		if err != nil {
-			errCh <- err
-			return
-		}
 
 		_, err = fmt.Fprintln(w, "C"+permissions, size, filename)
 		if err != nil {

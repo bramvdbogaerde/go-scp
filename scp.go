@@ -8,8 +8,9 @@
 package scp
 
 import (
-	"golang.org/x/crypto/ssh"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // Returns a new scp.Client with provided host and ssh.clientConfig
@@ -21,4 +22,8 @@ func NewClient(host string, config *ssh.ClientConfig) Client {
 // Returns a new scp.Client with provides host, ssh.ClientConfig and timeout
 func NewClientWithTimeout(host string, config *ssh.ClientConfig, timeout time.Duration) Client {
 	return NewConfigurer(host, config).Timeout(timeout).Create()
+}
+
+func NewClientWithSudoPassword(host string, config *ssh.ClientConfig, password string) Client {
+	return NewConfigurer(host, config).SudoPassword(password).Create()
 }
