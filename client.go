@@ -124,9 +124,10 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 	if a.SudoPassword != "" {
 		go func() {
 			_, err := w.Write([]byte(a.SudoPassword + "\n"))
-			fmt.Println("wrote password to sudo")
 			if err != nil {
-				errCh <- fmt.Errorf("ssh sudo: could not provide sudo password")
+				errCh <- fmt.Errorf("scp sudo: could not provide sudo password")
+				sudoCh <- false
+				return
 			}
 
 			sudoCh <- true
@@ -138,7 +139,11 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 
 	go func() {
 		defer wg.Done()
-		<-sudoCh
+		sudoSuccess := <-sudoCh
+		if !sudoSuccess {
+			errCh <- fmt.Errorf("sudo failed")
+			return
+		}
 
 		defer w.Close()
 
