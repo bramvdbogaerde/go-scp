@@ -9,14 +9,17 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
+
+type PassThru func(r io.Reader, total int64) io.Reader
 
 type Client struct {
 	// the host to connect to
@@ -54,18 +57,18 @@ func (a *Client) Connect() error {
 }
 
 //Copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem
-func (a *Client) CopyFromFile(file os.File, remotePath string, permissions string) error {
+func (a *Client) CopyFromFile(file os.File, remotePath string, permissions string, passThru PassThru) error {
 	stat, _ := file.Stat()
-	return a.Copy(&file, remotePath, permissions, stat.Size())
+	return a.Copy(&file, remotePath, permissions, stat.Size(), passThru)
 }
 
 // Copies the contents of an io.Reader to a remote location, the length is determined by reading the io.Reader until EOF
 // if the file length in know in advance please use "Copy" instead
-func (a *Client) CopyFile(fileReader io.Reader, remotePath string, permissions string) error {
+func (a *Client) CopyFile(fileReader io.Reader, remotePath string, permissions string, passThru PassThru) error {
 	contents_bytes, _ := ioutil.ReadAll(fileReader)
 	bytes_reader := bytes.NewReader(contents_bytes)
 
-	return a.Copy(bytes_reader, remotePath, permissions, int64(len(contents_bytes)))
+	return a.Copy(bytes_reader, remotePath, permissions, int64(len(contents_bytes)), passThru)
 }
 
 // waitTimeout waits for the waitgroup for the specified max timeout.
@@ -101,7 +104,11 @@ func checkResponse(r io.Reader) error {
 }
 
 // Copies the contents of an io.Reader to a remote location
-func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size int64) error {
+func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size int64, passThru PassThru) error {
+	if passThru != nil {
+		r = passThru(r, size)
+	}
+
 	filename := path.Base(remotePath)
 
 	wg := sync.WaitGroup{}
