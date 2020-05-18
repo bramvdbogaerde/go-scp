@@ -56,19 +56,32 @@ func (a *Client) Connect() error {
 	return nil
 }
 
-//Copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem
-func (a *Client) CopyFromFile(file os.File, remotePath string, permissions string, passThru PassThru) error {
+// Copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem
+func (a *Client) CopyFromFile(file os.File, remotePath string, permissions string) error {
+	return a.CopyFromFilePassThru(file, remotePath, permissions, nil)
+}
+
+// Copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem.
+// Access copied bytes by providing a PassThru reader factory
+func (a *Client) CopyFromFilePassThru(file os.File, remotePath string, permissions string, passThru PassThru) error {
 	stat, _ := file.Stat()
-	return a.Copy(&file, remotePath, permissions, stat.Size(), passThru)
+	return a.CopyPassThru(&file, remotePath, permissions, stat.Size(), passThru)
 }
 
 // Copies the contents of an io.Reader to a remote location, the length is determined by reading the io.Reader until EOF
 // if the file length in know in advance please use "Copy" instead
-func (a *Client) CopyFile(fileReader io.Reader, remotePath string, permissions string, passThru PassThru) error {
+func (a *Client) CopyFile(fileReader io.Reader, remotePath string, permissions string) error {
+	return a.CopyFilePassThru(fileReader, remotePath, permissions, nil)
+}
+
+// Copies the contents of an io.Reader to a remote location, the length is determined by reading the io.Reader until EOF
+// if the file length in know in advance please use "Copy" instead.
+// Access copied bytes by providing a PassThru reader factory
+func (a *Client) CopyFilePassThru(fileReader io.Reader, remotePath string, permissions string, passThru PassThru) error {
 	contents_bytes, _ := ioutil.ReadAll(fileReader)
 	bytes_reader := bytes.NewReader(contents_bytes)
 
-	return a.Copy(bytes_reader, remotePath, permissions, int64(len(contents_bytes)), passThru)
+	return a.CopyPassThru(bytes_reader, remotePath, permissions, int64(len(contents_bytes)), passThru)
 }
 
 // waitTimeout waits for the waitgroup for the specified max timeout.
@@ -104,7 +117,13 @@ func checkResponse(r io.Reader) error {
 }
 
 // Copies the contents of an io.Reader to a remote location
-func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size int64, passThru PassThru) error {
+func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size int64) error {
+	return a.CopyPassThru(r, remotePath, permissions, size, nil)
+}
+
+// Copies the contents of an io.Reader to a remote location.
+// Access copied bytes by providing a PassThru reader factory
+func (a *Client) CopyPassThru(r io.Reader, remotePath string, permissions string, size int64, passThru PassThru) error {
 	if passThru != nil {
 		r = passThru(r, size)
 	}
