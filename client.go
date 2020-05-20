@@ -19,7 +19,12 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	buffSize = 1024 * 256
+)
+
 type PassThru func(r io.Reader, total int64) io.Reader
+type WPassThru func(w io.Writer) io.Writer
 
 type Client struct {
 	// the host to connect to
@@ -201,6 +206,89 @@ func (a *Client) CopyPassThru(r io.Reader, remotePath string, permissions string
 		}
 	}
 	return nil
+}
+
+func (a *Client) CopyFromRemote(file os.File, remotePath string) error {
+	return a.CopyFromRemotePassThru(&file, remotePath, nil)
+}
+
+func (a *Client) CopyFromRemotePassThru(w io.Writer, remotePath string, passThru PassThru) error {
+	wg := sync.WaitGroup{}
+	errCh := make(chan error, 2)
+
+	wg.Add(1)
+	go func() {
+		var err error
+
+		defer func() {
+			if err != nil {
+				errCh <- err
+			}
+			wg.Done()
+		}()
+
+		r, err := a.Session.StdoutPipe()
+		if err != nil {
+			return
+		}
+
+		in, err := a.Session.StdinPipe()
+		if err != nil {
+			return
+		}
+		defer in.Close()
+
+		err = a.Session.Start(fmt.Sprintf("%s -f %s", a.RemoteBinary, remotePath))
+		if err != nil {
+			return
+		}
+
+		err = Ack(in)
+		if err != nil {
+			return
+		}
+
+		res, err := ParseResponse(r)
+		if err != nil {
+			return
+		}
+
+		infos, err := res.ParseFileInfos()
+		if err != nil {
+			return
+		}
+
+		err = Ack(in)
+		if err != nil {
+			return
+		}
+
+		if passThru != nil {
+			r = passThru(r, infos.Size)
+		}
+
+		_, err = CopyN(w, r, infos.Size)
+		if err != nil {
+			return
+		}
+
+		err = Ack(in)
+		if err != nil {
+			return
+		}
+
+		err = a.Session.Wait()
+		if err != nil {
+			return
+		}
+	}()
+
+	if waitTimeout(&wg, a.Timeout) {
+		return errors.New("timeout when download files")
+	}
+
+	close(errCh)
+	return <-errCh
 }
 
 func (a *Client) Close() {
