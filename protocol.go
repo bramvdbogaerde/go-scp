@@ -21,6 +21,8 @@ const (
 	Error   ResponseType = 2
 )
 
+const buffSize = 1024 * 256
+
 // There are tree types of responses that the remote can send back:
 // ok, warning and error
 //
