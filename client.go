@@ -20,7 +20,6 @@ import (
 )
 
 type PassThru func(r io.Reader, total int64) io.Reader
-type WPassThru func(w io.Writer) io.Writer
 
 type Client struct {
 	// the host to connect to
