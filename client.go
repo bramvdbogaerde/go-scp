@@ -19,10 +19,6 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const (
-	buffSize = 1024 * 256
-)
-
 type PassThru func(r io.Reader, total int64) io.Reader
 type WPassThru func(w io.Writer) io.Writer
 
@@ -214,7 +210,7 @@ func (a *Client) CopyFromRemote(file os.File, remotePath string) error {
 
 func (a *Client) CopyFromRemotePassThru(w io.Writer, remotePath string, passThru PassThru) error {
 	wg := sync.WaitGroup{}
-	errCh := make(chan error, 2)
+	errCh := make(chan error, 1)
 
 	wg.Add(1)
 	go func() {
