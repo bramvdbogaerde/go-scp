@@ -37,6 +37,34 @@ func PrivateKey(username string, path string, keyCallBack ssh.HostKeyCallback) (
 	}, nil
 }
 
+func PrivateKeyWithAgent(username string, path string, keyCallBack ssh.HostKeyCallback) (ssh.ClientConfig, error) {
+	var authMethod = []ssh.AuthMethod{}
+
+	if sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
+		authMethod = append(authMethod, ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers))
+	}
+
+	privateKey, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		return ssh.ClientConfig{}, err
+	}
+
+	signer, err := ssh.ParsePrivateKey(privateKey)
+
+	if err != nil {
+		return ssh.ClientConfig{}, err
+	}
+
+	authMethod = append(authMethod, ssh.PublicKeys(signer))
+
+	return ssh.ClientConfig{
+		User:            username,
+		Auth:            authMethod,
+		HostKeyCallback: keyCallBack,
+	}, nil
+}
+
 // Creates the configuration for a client that authenticates with a password protected private key
 func PrivateKeyWithPassphrase(username string, passpharase []byte, path string, keyCallBack ssh.HostKeyCallback) (ssh.ClientConfig, error) {
 	privateKey, err := ioutil.ReadFile(path)
