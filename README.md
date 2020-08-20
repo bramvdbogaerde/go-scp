@@ -7,12 +7,13 @@ It uses the golang.org/x/crypto/ssh package to establish a secure connection to 
 
 ### Example usage
 
+
 ```go
 package main
 
 import (
 	"fmt"
-	cp "github.com/bramvdbogaerde/go-scp"
+	scp "github.com/bramvdbogaerde/go-scp"
 	"github.com/bramvdbogaerde/go-scp/auth"
 	"golang.org/x/crypto/ssh"
 	"os"
@@ -55,61 +56,27 @@ func main() {
 }
 ```
 
-reuse ssh connection
+#### Using an existing SSH connection
+
+If you have an existing established SSH connection, you can use that instead.
+
 ```go
-package main
-
-import (
-    "fmt"
-    "io/ioutil"
-    scp "github.com/bramvdbogaerde/go-scp"
-    "golang.org/x/crypto/ssh"
-    "os"
-    "time"
-)
-
 func connectSSH() *ssh.Client {
-    config := &ssh.ClientConfig{
-        Timeout:         10 * time.Second,
-        User:            "username",
-        HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-    }
-    key, _ := ioutil.ReadFile("/path/to/rsa/key")
-    signer, _ := ssh.ParsePrivateKey(key)
-    config.Auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
-    
-    sshClient, _ := ssh.Dial("tcp", "example.com:22", config)
-    return sshClient
+   // setup SSH connection
 }
 
 func main() {
-	// Use SSH key authentication
-    sshClient := connectSSH()
+   sshClient := connectSSH()
 
-	// Create a new SCP client
-	client, err := scp.NewClientBySSH(sshClient)
-	if err != nil {
-		fmt.Println("Couldn't establish a connection to the remote server ", err)
-		return
-	}
+   // Create a new SCP client, note that this function might
+   // return an error, as a new SSH session is established using the existing connecton
 
-	// Open a file
-	f, _ := os.Open("/path/to/local/file")
+   client, err := scp.NewClientBySSH(sshClient)
+   if err != nil {
+      fmt.Println("Error creating new SSH session from existing connection", err)
+   }
 
-	// Close client connection after the file has been copied
-	defer client.Close()
-
-	// Close the file after it has been copied
-	defer f.Close()
-
-	// Finaly, copy the file over
-	// Usage: CopyFile(fileReader, remotePath, permission)
-
-	err = client.CopyFile(f, "/home/server/test.txt", "0655")
-
-	if err != nil {
-		fmt.Println("Error while copying file ", err)
-	}
+   /* .. same as above .. */
 }
 ```
 

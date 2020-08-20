@@ -8,8 +8,9 @@
 package scp
 
 import (
-	"golang.org/x/crypto/ssh"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // Returns a new scp.Client with provided host and ssh.clientConfig
@@ -23,7 +24,7 @@ func NewClientWithTimeout(host string, config *ssh.ClientConfig, timeout time.Du
 	return NewConfigurer(host, config).Timeout(timeout).Create()
 }
 
-// Returns a new scp.Client by already exists ssh session
+// Returns a new scp.Client using an already existing established SSH connection
 func NewClientBySSH(ssh *ssh.Client) (Client, error) {
 	session, err := ssh.NewSession()
 	if err != nil {
@@ -32,6 +33,7 @@ func NewClientBySSH(ssh *ssh.Client) (Client, error) {
 	return NewConfigurer("", nil).Session(session).Create(), nil
 }
 
+/// Same as NewClientWithTimeout but uses an existing SSH client
 func NewClientBySSHWithTimeout(ssh *ssh.Client, timeout time.Duration) (Client, error) {
 	session, err := ssh.NewSession()
 	if err != nil {

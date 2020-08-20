@@ -46,6 +46,7 @@ func (a *Client) Connect() error {
 	if a.Session != nil {
 		return nil
 	}
+
 	client, err := ssh.Dial("tcp", a.Host, a.ClientConfig)
 	if err != nil {
 		return err

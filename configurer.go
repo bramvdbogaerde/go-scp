@@ -7,8 +7,9 @@
 package scp
 
 import (
-	"golang.org/x/crypto/ssh"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // A struct containing all the configuration options
@@ -16,7 +17,7 @@ import (
 type ClientConfigurer struct {
 	host         string
 	clientConfig *ssh.ClientConfig
-	session 	 *ssh.Session
+	session      *ssh.Session
 	timeout      time.Duration
 	remoteBinary string
 }
@@ -76,6 +77,6 @@ func (c *ClientConfigurer) Create() Client {
 		ClientConfig: c.clientConfig,
 		Timeout:      c.timeout,
 		RemoteBinary: c.remoteBinary,
-		Session:  	  c.session,
+		Session:      c.session,
 	}
 }
