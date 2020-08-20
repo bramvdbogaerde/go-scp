@@ -16,6 +16,7 @@ import (
 type ClientConfigurer struct {
 	host         string
 	clientConfig *ssh.ClientConfig
+	session 	 *ssh.Session
 	timeout      time.Duration
 	remoteBinary string
 }
@@ -62,6 +63,12 @@ func (c *ClientConfigurer) ClientConfig(config *ssh.ClientConfig) *ClientConfigu
 	return c
 }
 
+// Alters the ssh.Session
+func (c *ClientConfigurer) Session(session *ssh.Session) *ClientConfigurer {
+	c.session = session
+	return c
+}
+
 // Builds a client with the configuration stored within the ClientConfigurer
 func (c *ClientConfigurer) Create() Client {
 	return Client{
@@ -69,5 +76,6 @@ func (c *ClientConfigurer) Create() Client {
 		ClientConfig: c.clientConfig,
 		Timeout:      c.timeout,
 		RemoteBinary: c.remoteBinary,
+		Session:  	  c.session,
 	}
 }
