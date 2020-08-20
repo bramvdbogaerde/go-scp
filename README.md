@@ -12,7 +12,7 @@ package main
 
 import (
 	"fmt"
-	scp "github.com/bramvdbogaerde/go-scp"
+	cp "github.com/bramvdbogaerde/go-scp"
 	"github.com/bramvdbogaerde/go-scp/auth"
 	"golang.org/x/crypto/ssh"
 	"os"
@@ -30,6 +30,64 @@ func main() {
 
 	// Connect to the remote server
 	err := client.Connect()
+	if err != nil {
+		fmt.Println("Couldn't establish a connection to the remote server ", err)
+		return
+	}
+
+	// Open a file
+	f, _ := os.Open("/path/to/local/file")
+
+	// Close client connection after the file has been copied
+	defer client.Close()
+
+	// Close the file after it has been copied
+	defer f.Close()
+
+	// Finaly, copy the file over
+	// Usage: CopyFile(fileReader, remotePath, permission)
+
+	err = client.CopyFile(f, "/home/server/test.txt", "0655")
+
+	if err != nil {
+		fmt.Println("Error while copying file ", err)
+	}
+}
+```
+
+reuse ssh connection
+```go
+package main
+
+import (
+    "fmt"
+    "io/ioutil"
+    scp "github.com/bramvdbogaerde/go-scp"
+    "golang.org/x/crypto/ssh"
+    "os"
+    "time"
+)
+
+func connectSSH() *ssh.Client {
+    config := &ssh.ClientConfig{
+        Timeout:         10 * time.Second,
+        User:            "username",
+        HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+    }
+    key, _ := ioutil.ReadFile("/path/to/rsa/key")
+    signer, _ := ssh.ParsePrivateKey(key)
+    config.Auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
+    
+    sshClient, _ := ssh.Dial("tcp", "example.com:22", config)
+    return sshClient
+}
+
+func main() {
+	// Use SSH key authentication
+    sshClient := connectSSH()
+
+	// Create a new SCP client
+	client, err := scp.NewClientBySSH(sshClient)
 	if err != nil {
 		fmt.Println("Couldn't establish a connection to the remote server ", err)
 		return
