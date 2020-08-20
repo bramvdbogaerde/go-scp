@@ -22,3 +22,20 @@ func NewClient(host string, config *ssh.ClientConfig) Client {
 func NewClientWithTimeout(host string, config *ssh.ClientConfig, timeout time.Duration) Client {
 	return NewConfigurer(host, config).Timeout(timeout).Create()
 }
+
+// Returns a new scp.Client by already exists ssh session
+func NewClientBySSH(ssh *ssh.Client) (Client, error) {
+	session, err := ssh.NewSession()
+	if err != nil {
+		return Client{}, err
+	}
+	return NewConfigurer("", nil).Session(session).Create(), nil
+}
+
+func NewClientBySSHWithTimeout(ssh *ssh.Client, timeout time.Duration) (Client, error) {
+	session, err := ssh.NewSession()
+	if err != nil {
+		return Client{}, err
+	}
+	return NewConfigurer("", nil).Session(session).Timeout(timeout).Create(), nil
+}

@@ -43,6 +43,9 @@ type Client struct {
 
 // Connects to the remote SSH server, returns error if it couldn't establish a session to the SSH server
 func (a *Client) Connect() error {
+	if a.Session != nil {
+		return nil
+	}
 	client, err := ssh.Dial("tcp", a.Host, a.ClientConfig)
 	if err != nil {
 		return err
@@ -204,6 +207,10 @@ func (a *Client) CopyPassThru(r io.Reader, remotePath string, permissions string
 }
 
 func (a *Client) Close() {
-	a.Session.Close()
-	a.Conn.Close()
+	if a.Session != nil {
+		a.Session.Close()
+	}
+	if a.Conn != nil {
+		a.Conn.Close()
+	}
 }
