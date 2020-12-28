@@ -33,7 +33,7 @@ func NewClientBySSH(ssh *ssh.Client) (Client, error) {
 	return NewConfigurer("", nil).Session(session).Create(), nil
 }
 
-/// Same as NewClientWithTimeout but uses an existing SSH client
+// Same as NewClientWithTimeout but uses an existing SSH client
 func NewClientBySSHWithTimeout(ssh *ssh.Client, timeout time.Duration) (Client, error) {
 	session, err := ssh.NewSession()
 	if err != nil {
