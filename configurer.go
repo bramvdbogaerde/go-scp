@@ -33,7 +33,7 @@ func NewConfigurer(host string, config *ssh.ClientConfig) *ClientConfigurer {
 	return &ClientConfigurer{
 		host:         host,
 		clientConfig: config,
-		timeout:      time.Minute,
+		timeout:      config.Timeout,
 		remoteBinary: "scp",
 	}
 }
