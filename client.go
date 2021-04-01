@@ -128,6 +128,11 @@ func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size i
 // Copies the contents of an io.Reader to a remote location.
 // Access copied bytes by providing a PassThru reader factory
 func (a *Client) CopyPassThru(r io.Reader, remotePath string, permissions string, size int64, passThru PassThru) error {
+	stdout, err := a.Session.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
 	if passThru != nil {
 		r = passThru(r, size)
 	}
@@ -148,13 +153,6 @@ func (a *Client) CopyPassThru(r io.Reader, remotePath string, permissions string
 		}
 
 		defer w.Close()
-
-		stdout, err := a.Session.StdoutPipe()
-
-		if err != nil {
-			errCh <- err
-			return
-		}
 
 		_, err = fmt.Fprintln(w, "C"+permissions, size, filename)
 		if err != nil {
