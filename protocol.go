@@ -7,7 +7,10 @@ package scp
 
 import (
 	"bufio"
+	"errors"
 	"io"
+	"strconv"
+	"strings"
 )
 
 type ResponseType = uint8
@@ -17,6 +20,8 @@ const (
 	Warning ResponseType = 1
 	Error   ResponseType = 2
 )
+
+const buffSize = 1024 * 256
 
 // There are tree types of responses that the remote can send back:
 // ok, warning and error
@@ -76,4 +81,57 @@ func (r *Response) IsFailure() bool {
 // Returns the message the remote sent back
 func (r *Response) GetMessage() string {
 	return r.Message
+}
+
+type FileInfos struct {
+	Message     string
+	Filename    string
+	Permissions string
+	Size        int64
+}
+
+func (r *Response) ParseFileInfos() (*FileInfos, error) {
+	message := strings.ReplaceAll(r.Message, "\n", "")
+	parts := strings.Split(message, " ")
+	if len(parts) < 3 {
+		return nil, errors.New("Unable to parse message as file infos")
+	}
+
+	size, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return nil, err
+	}
+
+	return &FileInfos{
+		Message:     r.Message,
+		Permissions: parts[0],
+		Size:        int64(size),
+		Filename:    parts[2],
+	}, nil
+}
+
+// from https://github.com/dtylman/scp/blob/f3000a34aef49d94fcecd8f636244fb65e799133/scp.go
+func CopyN(writer io.Writer, src io.Reader, size int64) (int64, error) {
+	reader := io.LimitReader(src, size)
+	var total int64
+	for total < size {
+		n, err := io.CopyBuffer(writer, reader, make([]byte, buffSize))
+		if err != nil {
+			return 0, err
+		}
+		total += n
+	}
+	return total, nil
+}
+
+func Ack(writer io.Writer) error {
+	var msg = []byte{0}
+	n, err := writer.Write(msg)
+	if err != nil {
+		return err
+	}
+	if n < len(msg) {
+		return errors.New("Failed to write ack buffer")
+	}
+	return nil
 }
