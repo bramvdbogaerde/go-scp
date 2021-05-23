@@ -1,4 +1,4 @@
-/* Copyright (c) 2020 Bram Vandenbogaerde
+/* Copyright (c) 2021 Bram Vandenbogaerde And Contributors
  * You may use, distribute or modify this code under the
  * terms of the Mozilla Public License 2.0, which is distributed
  * along with the source code.
@@ -110,20 +110,8 @@ func (r *Response) ParseFileInfos() (*FileInfos, error) {
 	}, nil
 }
 
-// from https://github.com/dtylman/scp/blob/f3000a34aef49d94fcecd8f636244fb65e799133/scp.go
-func CopyN(writer io.Writer, src io.Reader, size int64) (int64, error) {
-	reader := io.LimitReader(src, size)
-	var total int64
-	for total < size {
-		n, err := io.CopyBuffer(writer, reader, make([]byte, buffSize))
-		if err != nil {
-			return 0, err
-		}
-		total += n
-	}
-	return total, nil
-}
-
+// Writes an `Ack` message to the remote, does not await its response, a seperate call to ParseResponse is 
+// therefore required to check if the acknowledgement succeeded
 func Ack(writer io.Writer) error {
 	var msg = []byte{0}
 	n, err := writer.Write(msg)

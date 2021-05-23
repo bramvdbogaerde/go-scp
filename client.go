@@ -1,4 +1,4 @@
-/* Copyright (c) 2020 Bram Vandenbogaerde
+/* Copyright (c) 2021 Bram Vandenbogaerde And Contributors
  * You may use, distribute or modify this code under the
  * terms of the Mozilla Public License 2.0, which is distributed
  * along with the source code.
@@ -205,10 +205,16 @@ func (a *Client) CopyPassThru(r io.Reader, remotePath string, permissions string
 	return nil
 }
 
-func (a *Client) CopyFromRemote(file os.File, remotePath string) error {
-	return a.CopyFromRemotePassThru(&file, remotePath, nil)
+// Copy a file from the remote to the local file given by the `file`
+// parameter. Use `CopyFromRemotePassThru` if a more generic writer 
+// is desired instead of writing directly to a file on the file system.?
+func (a *Client) CopyFromRemote(file *os.File, remotePath string) error {
+	return a.CopyFromRemotePassThru(file, remotePath, nil)
 }
 
+// Copy a file from the remote to the given writer. The passThru parameter can be used 
+// to keep track of progress and how many bytes that were download from the remote.
+// `passThru` can be set to nil to disable this behaviour.
 func (a *Client) CopyFromRemotePassThru(w io.Writer, remotePath string, passThru PassThru) error {
 	wg := sync.WaitGroup{}
 	errCh := make(chan error, 1)
@@ -221,42 +227,50 @@ func (a *Client) CopyFromRemotePassThru(w io.Writer, remotePath string, passThru
 			if err != nil {
 				errCh <- err
 			}
+                        errCh<-err
 			wg.Done()
 		}()
 
 		r, err := a.Session.StdoutPipe()
 		if err != nil {
+                        errCh<-err
 			return
 		}
 
 		in, err := a.Session.StdinPipe()
 		if err != nil {
+                        errCh<-err
 			return
 		}
 		defer in.Close()
 
 		err = a.Session.Start(fmt.Sprintf("%s -f %s", a.RemoteBinary, remotePath))
 		if err != nil {
+                        errCh<-err
 			return
 		}
 
 		err = Ack(in)
 		if err != nil {
+                        errCh<-err
 			return
 		}
 
 		res, err := ParseResponse(r)
 		if err != nil {
+                        errCh<-err
 			return
 		}
 
 		infos, err := res.ParseFileInfos()
 		if err != nil {
+                        errCh<-err
 			return
 		}
 
 		err = Ack(in)
 		if err != nil {
+                        errCh<-err
 			return
 		}
 
@@ -266,16 +280,19 @@ func (a *Client) CopyFromRemotePassThru(w io.Writer, remotePath string, passThru
 
 		_, err = CopyN(w, r, infos.Size)
 		if err != nil {
+                        errCh<-err
 			return
 		}
 
 		err = Ack(in)
 		if err != nil {
+                        errCh<-err
 			return
 		}
 
 		err = a.Session.Wait()
 		if err != nil {
+                        errCh<-err
 			return
 		}
 	}()
