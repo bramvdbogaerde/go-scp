@@ -80,7 +80,7 @@ func main() {
 }
 ```
 
-### Copying Files from Remote Server
+#### Copying Files from Remote Server
 
 It is also possible to copy remote files using this library. 
 The usage is similar to the `Example Usage` section, except that `CopyFromRemote` needs
