@@ -83,11 +83,9 @@ func main() {
 #### Copying Files from Remote Server
 
 It is also possible to copy remote files using this library. 
-The usage is similar to the `Example Usage` section, except that `CopyFromRemote` needs
-to be used instead.
+The usage is similar to the example at the top of this section, except that `CopyFromRemote` needsto be used instead.
 
-For a more comprehensive example, please consult the `tests/basic_test.go` file, in the 
-`TestDownloadFile` function.
+For a more comprehensive example, please consult the `TestDownloadFile` function in t he `tests/basic_test.go` file.
 
 ### License
 
