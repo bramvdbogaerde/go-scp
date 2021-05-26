@@ -110,7 +110,7 @@ func (r *Response) ParseFileInfos() (*FileInfos, error) {
 	}, nil
 }
 
-// Writes an `Ack` message to the remote, does not await its response, a seperate call to ParseResponse is 
+// Writes an `Ack` message to the remote, does not await its response, a seperate call to ParseResponse is
 // therefore required to check if the acknowledgement succeeded
 func Ack(writer io.Writer) error {
 	var msg = []byte{0}
