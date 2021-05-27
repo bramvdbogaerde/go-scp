@@ -4,7 +4,7 @@ rm tmp/*
 
 echo "Running from $(pwd)"
 
-echo "Starting docker containers" 
+echo "Starting docker containers"
 
 docker run -d \
    --name go-scp-test \

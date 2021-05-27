@@ -185,7 +185,7 @@ func (a *Client) CopyPassThru(r io.Reader, remotePath string, permissions string
 
 	go func() {
 		defer wg.Done()
-		err := a.Session.Run(fmt.Sprintf("%s -qt %s", a.RemoteBinary, remotePath))
+		err := a.Session.Run(fmt.Sprintf("%s -qt %q", a.RemoteBinary, remotePath))
 		if err != nil {
 			errCh <- err
 			return
@@ -244,7 +244,7 @@ func (a *Client) CopyFromRemotePassThru(w io.Writer, remotePath string, passThru
 		}
 		defer in.Close()
 
-		err = a.Session.Start(fmt.Sprintf("%s -f %s", a.RemoteBinary, remotePath))
+		err = a.Session.Start(fmt.Sprintf("%s -f %q", a.RemoteBinary, remotePath))
 		if err != nil {
 			errCh <- err
 			return
