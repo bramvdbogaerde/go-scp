@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	scp "github.com/bramvdbogaerde/go-scp"
 	"github.com/bramvdbogaerde/go-scp/auth"
@@ -104,5 +105,26 @@ func TestDownloadFile(t *testing.T) {
 	expected := "It works for download!\n"
 	if strings.Compare(text, expected) != 0 {
 		t.Errorf("Got different text than expected, expected %q got, %q", expected, text)
+	}
+}
+
+// TestTimeoutDownload tests that a timeout error is produced if the file is not copied in the given
+// amount of time.
+func TestTimeoutDownload(t *testing.T) {
+	client := establishConnection(t)
+	defer client.Close()
+	client.Timeout = 1 * time.Millisecond
+
+	// Open a file we can transfer to the remote container.
+	f, _ := os.Open("./data/upload_file.txt")
+	defer f.Close()
+
+	// Create a file name with exotic characters and spaces in them.
+	// If this test works for this, simpler files should not be a problem.
+	filename := "Exöt1ç uploaded file.txt"
+
+	err := client.CopyFile(f, "/data/"+filename, "0777")
+	if err == nil {
+		t.Errorf("Expected a timeout error but transfer succeeded without error")
 	}
 }

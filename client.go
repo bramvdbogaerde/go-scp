@@ -34,7 +34,7 @@ type Client struct {
 	// stores the SSH connection itself in order to close it after transfer
 	Conn ssh.Conn
 
-	// the clients waits for the given timeout until given up the connection
+	// the maximal amount of time to wait for a file transfer to complete
 	Timeout time.Duration
 
 	// the absolute path to the remote SCP binary
@@ -96,11 +96,19 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 		defer close(c)
 		wg.Wait()
 	}()
-	select {
-	case <-c:
-		return false // completed normally
-	case <-time.After(timeout):
-		return true // timed out
+	if timeout > 0 {
+		select {
+		case <-c:
+			return false // completed normally
+		case <-time.After(timeout):
+			return true // timed out
+		}
+	} else {
+		// only wait for waitgroup to complete
+		select {
+		case <-c:
+			return false
+		}
 	}
 }
 
