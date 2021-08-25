@@ -105,11 +105,10 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 		}
 	} else {
 		// only wait for waitgroup to complete
-		select {
-		case <-c:
-			return false
-		}
+		<-c
+		return false
 	}
+}
 }
 
 // Checks the response it reads from the remote, and will return a single error in case
