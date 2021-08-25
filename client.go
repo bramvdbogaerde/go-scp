@@ -97,10 +97,13 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 		wg.Wait()
 	}()
 	if timeout > 0 {
+        timer := time.NewTimer(timeout)
+        defer timer.Stop()
+
 		select {
 		case <-c:
 			return false // completed normally
-		case <-time.After(timeout):
+		case <-timer.C:
 			return true // timed out
 		}
 	} else {
@@ -108,7 +111,6 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 		<-c
 		return false
 	}
-}
 }
 
 // Checks the response it reads from the remote, and will return a single error in case
