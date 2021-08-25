@@ -80,6 +80,13 @@ func main() {
 }
 ```
 
+#### Copying Files from Remote Server
+
+It is also possible to copy remote files using this library. 
+The usage is similar to the example at the top of this section, except that `CopyFromRemote` needsto be used instead.
+
+For a more comprehensive example, please consult the `TestDownloadFile` function in t he `tests/basic_test.go` file.
+
 ### License
 
 This library is licensed under the Mozilla Public License 2.0.    
