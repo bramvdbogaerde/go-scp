@@ -105,10 +105,8 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 		}
 	} else {
 		// only wait for waitgroup to complete
-		select {
-		case <-c:
-			return false
-		}
+		<-c
+		return false
 	}
 }
 
