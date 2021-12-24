@@ -1,13 +1,14 @@
 package tests
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
-	scp "github.com/bramvdbogaerde/go-scp"
+	"github.com/bramvdbogaerde/go-scp"
 	"github.com/bramvdbogaerde/go-scp/auth"
 	"golang.org/x/crypto/ssh"
 )
@@ -49,7 +50,7 @@ func TestCopy(t *testing.T) {
 
 	// Finaly, copy the file over.
 	// Usage: CopyFile(fileReader, remotePath, permission).
-	err := client.CopyFile(f, "/data/"+filename, "0777")
+	err := client.CopyFile(context.Background(), f, "/data/"+filename, "0777")
 	if err != nil {
 		t.Errorf("Error while copying file: %s", err)
 	}
@@ -91,7 +92,7 @@ func TestDownloadFile(t *testing.T) {
 
 	// Use a file name with exotic characters and spaces in them.
 	// If this test works for this, simpler files should not be a problem.
-	err = client.CopyFromRemote(f, "/input/Exöt1ç download file.txt.txt")
+	err = client.CopyFromRemote(context.Background(), f, "/input/Exöt1ç download file.txt.txt")
 	if err != nil {
 		t.Errorf("Copy failed from remote")
 	}
@@ -123,7 +124,30 @@ func TestTimeoutDownload(t *testing.T) {
 	// If this test works for this, simpler files should not be a problem.
 	filename := "Exöt1ç uploaded file.txt"
 
-	err := client.CopyFile(f, "/data/"+filename, "0777")
+	err := client.CopyFile(context.Background(), f, "/data/"+filename, "0777")
+	if err == nil {
+		t.Errorf("Expected a timeout error but transfer succeeded without error")
+	}
+}
+
+// TestTimeoutDownload tests that a timeout error is produced if the file is not copied in the given
+// amount of time.
+func TestContextCancelDownload(t *testing.T) {
+	client := establishConnection(t)
+	defer client.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	// Open a file we can transfer to the remote container.
+	f, _ := os.Open("./data/upload_file.txt")
+	defer f.Close()
+
+	// Create a file name with exotic characters and spaces in them.
+	// If this test works for this, simpler files should not be a problem.
+	filename := "Exöt1ç uploaded file.txt"
+
+	err := client.CopyFile(ctx, f, "/data/"+filename, "0777")
 	if err == nil {
 		t.Errorf("Expected a timeout error but transfer succeeded without error")
 	}

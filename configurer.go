@@ -7,9 +7,8 @@
 package scp
 
 import (
-	"time"
-
 	"golang.org/x/crypto/ssh"
+	"time"
 )
 
 // A struct containing all the configuration options

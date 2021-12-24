@@ -7,6 +7,7 @@ package scp
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -35,6 +36,7 @@ type Client struct {
 	Conn ssh.Conn
 
 	// the maximal amount of time to wait for a file transfer to complete
+	// Deprecated: use context.Context for each function instead.
 	Timeout time.Duration
 
 	// the absolute path to the remote SCP binary
@@ -61,55 +63,48 @@ func (a *Client) Connect() error {
 }
 
 // Copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem
-func (a *Client) CopyFromFile(file os.File, remotePath string, permissions string) error {
-	return a.CopyFromFilePassThru(file, remotePath, permissions, nil)
+func (a *Client) CopyFromFile(ctx context.Context, file os.File, remotePath string, permissions string) error {
+	return a.CopyFromFilePassThru(ctx, file, remotePath, permissions, nil)
 }
 
 // Copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem.
 // Access copied bytes by providing a PassThru reader factory
-func (a *Client) CopyFromFilePassThru(file os.File, remotePath string, permissions string, passThru PassThru) error {
+func (a *Client) CopyFromFilePassThru(ctx context.Context, file os.File, remotePath string, permissions string, passThru PassThru) error {
 	stat, _ := file.Stat()
-	return a.CopyPassThru(&file, remotePath, permissions, stat.Size(), passThru)
+	return a.CopyPassThru(ctx, &file, remotePath, permissions, stat.Size(), passThru)
 }
 
 // Copies the contents of an io.Reader to a remote location, the length is determined by reading the io.Reader until EOF
 // if the file length in know in advance please use "Copy" instead
-func (a *Client) CopyFile(fileReader io.Reader, remotePath string, permissions string) error {
-	return a.CopyFilePassThru(fileReader, remotePath, permissions, nil)
+func (a *Client) CopyFile(ctx context.Context, fileReader io.Reader, remotePath string, permissions string) error {
+	return a.CopyFilePassThru(ctx, fileReader, remotePath, permissions, nil)
 }
 
 // Copies the contents of an io.Reader to a remote location, the length is determined by reading the io.Reader until EOF
 // if the file length in know in advance please use "Copy" instead.
 // Access copied bytes by providing a PassThru reader factory
-func (a *Client) CopyFilePassThru(fileReader io.Reader, remotePath string, permissions string, passThru PassThru) error {
+func (a *Client) CopyFilePassThru(ctx context.Context, fileReader io.Reader, remotePath string, permissions string, passThru PassThru) error {
 	contents_bytes, _ := ioutil.ReadAll(fileReader)
 	bytes_reader := bytes.NewReader(contents_bytes)
 
-	return a.CopyPassThru(bytes_reader, remotePath, permissions, int64(len(contents_bytes)), passThru)
+	return a.CopyPassThru(ctx, bytes_reader, remotePath, permissions, int64(len(contents_bytes)), passThru)
 }
 
 // waitTimeout waits for the waitgroup for the specified max timeout.
 // Returns true if waiting timed out.
-func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+func wait(wg *sync.WaitGroup, ctx context.Context) error {
 	c := make(chan struct{})
 	go func() {
 		defer close(c)
 		wg.Wait()
 	}()
-	if timeout > 0 {
-		timer := time.NewTimer(timeout)
-		defer timer.Stop()
 
-		select {
-		case <-c:
-			return false // completed normally
-		case <-timer.C:
-			return true // timed out
-		}
-	} else {
-		// only wait for waitgroup to complete
-		<-c
-		return false
+	select {
+	case <-c:
+		return nil
+
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
@@ -130,13 +125,13 @@ func checkResponse(r io.Reader) error {
 }
 
 // Copies the contents of an io.Reader to a remote location
-func (a *Client) Copy(r io.Reader, remotePath string, permissions string, size int64) error {
-	return a.CopyPassThru(r, remotePath, permissions, size, nil)
+func (a *Client) Copy(ctx context.Context, r io.Reader, remotePath string, permissions string, size int64) error {
+	return a.CopyPassThru(ctx, r, remotePath, permissions, size, nil)
 }
 
 // Copies the contents of an io.Reader to a remote location.
 // Access copied bytes by providing a PassThru reader factory
-func (a *Client) CopyPassThru(r io.Reader, remotePath string, permissions string, size int64, passThru PassThru) error {
+func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath string, permissions string, size int64, passThru PassThru) error {
 	stdout, err := a.Session.StdoutPipe()
 	if err != nil {
 		return err
@@ -201,8 +196,14 @@ func (a *Client) CopyPassThru(r io.Reader, remotePath string, permissions string
 		}
 	}()
 
-	if waitTimeout(&wg, a.Timeout) {
-		return errors.New("timeout when upload files")
+	if a.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, a.Timeout)
+		defer cancel()
+	}
+
+	if err := wait(&wg, ctx); err != nil {
+		return err
 	}
 
 	close(errCh)
@@ -217,14 +218,14 @@ func (a *Client) CopyPassThru(r io.Reader, remotePath string, permissions string
 // Copy a file from the remote to the local file given by the `file`
 // parameter. Use `CopyFromRemotePassThru` if a more generic writer
 // is desired instead of writing directly to a file on the file system.?
-func (a *Client) CopyFromRemote(file *os.File, remotePath string) error {
-	return a.CopyFromRemotePassThru(file, remotePath, nil)
+func (a *Client) CopyFromRemote(ctx context.Context, file *os.File, remotePath string) error {
+	return a.CopyFromRemotePassThru(ctx, file, remotePath, nil)
 }
 
 // Copy a file from the remote to the given writer. The passThru parameter can be used
 // to keep track of progress and how many bytes that were download from the remote.
 // `passThru` can be set to nil to disable this behaviour.
-func (a *Client) CopyFromRemotePassThru(w io.Writer, remotePath string, passThru PassThru) error {
+func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remotePath string, passThru PassThru) error {
 	wg := sync.WaitGroup{}
 	errCh := make(chan error, 1)
 
@@ -306,8 +307,14 @@ func (a *Client) CopyFromRemotePassThru(w io.Writer, remotePath string, passThru
 		}
 	}()
 
-	if waitTimeout(&wg, a.Timeout) {
-		return errors.New("timeout when download files")
+	if a.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, a.Timeout)
+		defer cancel()
+	}
+
+	if err := wait(&wg, ctx); err != nil {
+		return err
 	}
 
 	close(errCh)

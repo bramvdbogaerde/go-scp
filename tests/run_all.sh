@@ -16,7 +16,7 @@ docker run -d \
    -v $(pwd)/entrypoint.d/:/etc/entrypoint.d/ \
    panubo/sshd
 
-sleep 2
+sleep 5
 
 echo "Running tests"
 go test
