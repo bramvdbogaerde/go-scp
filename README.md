@@ -17,6 +17,7 @@ import (
 	"github.com/bramvdbogaerde/go-scp/auth"
 	"golang.org/x/crypto/ssh"
 	"os"
+        "context"
 )
 
 func main() {
@@ -46,9 +47,10 @@ func main() {
 	defer f.Close()
 
 	// Finaly, copy the file over
-	// Usage: CopyFromFile(file, remotePath, permission)
+	// Usage: CopyFromFile(context, file, remotePath, permission)
 
-	err = client.CopyFromFile(*f, "/home/server/test.txt", "0655")
+        // the context can be adjusted to provide time-outs or inherit from other contexts if this is embedded in a larger application.
+	err = client.CopyFromFile(context.Background(), *f, "/home/server/test.txt", "0655")
 
 	if err != nil {
 		fmt.Println("Error while copying file ", err)
