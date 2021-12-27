@@ -125,13 +125,12 @@ func TestTimeoutDownload(t *testing.T) {
 	filename := "Exöt1ç uploaded file.txt"
 
 	err := client.CopyFile(context.Background(), f, "/data/"+filename, "0777")
-	if err == nil {
-		t.Errorf("Expected a timeout error but transfer succeeded without error")
+	if err != context.DeadlineExceeded {
+		t.Errorf("Expected a timeout error but got succeeded without error")
 	}
 }
 
-// TestTimeoutDownload tests that a timeout error is produced if the file is not copied in the given
-// amount of time.
+// TestContextCancelDownload tests that a a copy is immediately cancelled if we call context.cancel()
 func TestContextCancelDownload(t *testing.T) {
 	client := establishConnection(t)
 	defer client.Close()
@@ -148,7 +147,7 @@ func TestContextCancelDownload(t *testing.T) {
 	filename := "Exöt1ç uploaded file.txt"
 
 	err := client.CopyFile(ctx, f, "/data/"+filename, "0777")
-	if err == nil {
-		t.Errorf("Expected a timeout error but transfer succeeded without error")
+	if err != context.Canceled {
+		t.Errorf("Expected a canceled error but transfer succeeded without error")
 	}
 }
