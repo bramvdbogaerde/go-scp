@@ -3,6 +3,7 @@
  * terms of the Mozilla Public License 2.0, which is distributed
  * along with the source code.
  */
+
 package scp
 
 import (
@@ -23,6 +24,7 @@ const (
 
 const buffSize = 1024 * 256
 
+// Response represent a response from the SCP command.
 // There are tree types of responses that the remote can send back:
 // ok, warning and error
 //
@@ -39,7 +41,7 @@ type Response struct {
 	Message string
 }
 
-// Reads from the given reader (assuming it is the output of the remote) and parses it into a Response structure
+// ParseResponse reads from the given reader (assuming it is the output of the remote) and parses it into a Response structure.
 func ParseResponse(reader io.Reader) (Response, error) {
 	buffer := make([]uint8, 1)
 	_, err := reader.Read(buffer)
@@ -68,17 +70,17 @@ func (r *Response) IsWarning() bool {
 	return r.Type == Warning
 }
 
-// Returns true when the remote responded with an error
+// IsError returns true when the remote responded with an error.
 func (r *Response) IsError() bool {
 	return r.Type == Error
 }
 
-// Returns true when the remote answered with a warning or an error
+// IsFailure returns true when the remote answered with a warning or an error.
 func (r *Response) IsFailure() bool {
 	return r.Type > 0
 }
 
-// Returns the message the remote sent back
+// GetMessage returns the message the remote sent back.
 func (r *Response) GetMessage() string {
 	return r.Message
 }
@@ -110,8 +112,8 @@ func (r *Response) ParseFileInfos() (*FileInfos, error) {
 	}, nil
 }
 
-// Writes an `Ack` message to the remote, does not await its response, a seperate call to ParseResponse is
-// therefore required to check if the acknowledgement succeeded
+// Ack writes an `Ack` message to the remote, does not await its response, a seperate call to ParseResponse is
+// therefore required to check if the acknowledgement succeeded.
 func Ack(writer io.Writer) error {
 	var msg = []byte{0}
 	n, err := writer.Write(msg)
