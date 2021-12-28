@@ -71,7 +71,10 @@ func (a *Client) CopyFromFile(ctx context.Context, file os.File, remotePath stri
 // CopyFromFilePassThru copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem.
 // Access copied bytes by providing a PassThru reader factory.
 func (a *Client) CopyFromFilePassThru(ctx context.Context, file os.File, remotePath string, permissions string, passThru PassThru) error {
-	stat, _ := file.Stat()
+	stat, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat file: %w", err)
+	}
 	return a.CopyPassThru(ctx, &file, remotePath, permissions, stat.Size(), passThru)
 }
 
@@ -85,7 +88,10 @@ func (a *Client) CopyFile(ctx context.Context, fileReader io.Reader, remotePath 
 // if the file length in know in advance please use "Copy" instead.
 // Access copied bytes by providing a PassThru reader factory.
 func (a *Client) CopyFilePassThru(ctx context.Context, fileReader io.Reader, remotePath string, permissions string, passThru PassThru) error {
-	contents_bytes, _ := ioutil.ReadAll(fileReader)
+	contents_bytes, err := ioutil.ReadAll(fileReader)
+	if err != nil {
+		return fmt.Errorf("failed to read all data from reader: %w", err)
+	}
 	bytes_reader := bytes.NewReader(contents_bytes)
 
 	return a.CopyPassThru(ctx, bytes_reader, remotePath, permissions, int64(len(contents_bytes)), passThru)
