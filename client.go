@@ -88,13 +88,13 @@ func (a *Client) CopyFile(ctx context.Context, fileReader io.Reader, remotePath 
 // if the file length in know in advance please use "Copy" instead.
 // Access copied bytes by providing a PassThru reader factory.
 func (a *Client) CopyFilePassThru(ctx context.Context, fileReader io.Reader, remotePath string, permissions string, passThru PassThru) error {
-	contents_bytes, err := ioutil.ReadAll(fileReader)
+	contentsBytes, err := ioutil.ReadAll(fileReader)
 	if err != nil {
 		return fmt.Errorf("failed to read all data from reader: %w", err)
 	}
-	bytes_reader := bytes.NewReader(contents_bytes)
+	bytesReader := bytes.NewReader(contentsBytes)
 
-	return a.CopyPassThru(ctx, bytes_reader, remotePath, permissions, int64(len(contents_bytes)), passThru)
+	return a.CopyPassThru(ctx, bytesReader, remotePath, permissions, int64(len(contentsBytes)), passThru)
 }
 
 // wait waits for the waitgroup for the specified max timeout.

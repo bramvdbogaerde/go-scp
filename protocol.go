@@ -49,17 +49,17 @@ func ParseResponse(reader io.Reader) (Response, error) {
 		return Response{}, err
 	}
 
-	response_type := buffer[0]
+	responseType := buffer[0]
 	message := ""
-	if response_type > 0 {
-		buffered_reader := bufio.NewReader(reader)
-		message, err = buffered_reader.ReadString('\n')
+	if responseType > 0 {
+		bufferedReader := bufio.NewReader(reader)
+		message, err = bufferedReader.ReadString('\n')
 		if err != nil {
 			return Response{}, err
 		}
 	}
 
-	return Response{response_type, message}, nil
+	return Response{responseType, message}, nil
 }
 
 func (r *Response) IsOk() bool {
