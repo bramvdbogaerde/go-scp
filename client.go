@@ -3,6 +3,7 @@
  * terms of the Mozilla Public License 2.0, which is distributed
  * along with the source code.
  */
+
 package scp
 
 import (
@@ -23,27 +24,27 @@ import (
 type PassThru func(r io.Reader, total int64) io.Reader
 
 type Client struct {
-	// the host to connect to
+	// Host the host to connect to.
 	Host string
 
-	// the client config to use
+	// ClientConfig the client config to use.
 	ClientConfig *ssh.ClientConfig
 
-	// stores the SSH session while the connection is running
+	// Session stores the SSH session while the connection is running.
 	Session *ssh.Session
 
-	// stores the SSH connection itself in order to close it after transfer
+	// Conn stores the SSH connection itself in order to close it after transfer.
 	Conn ssh.Conn
 
-	// the maximal amount of time to wait for a file transfer to complete
+	// Timeout the maximal amount of time to wait for a file transfer to complete.
 	// Deprecated: use context.Context for each function instead.
 	Timeout time.Duration
 
-	// the absolute path to the remote SCP binary
+	// RemoteBinary the absolute path to the remote SCP binary.
 	RemoteBinary string
 }
 
-// Connects to the remote SSH server, returns error if it couldn't establish a session to the SSH server
+// Connect connects to the remote SSH server, returns error if it couldn't establish a session to the SSH server.
 func (a *Client) Connect() error {
 	if a.Session != nil {
 		return nil
@@ -62,35 +63,41 @@ func (a *Client) Connect() error {
 	return nil
 }
 
-// Copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem
+// CopyFromFile copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem.
 func (a *Client) CopyFromFile(ctx context.Context, file os.File, remotePath string, permissions string) error {
 	return a.CopyFromFilePassThru(ctx, file, remotePath, permissions, nil)
 }
 
-// Copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem.
-// Access copied bytes by providing a PassThru reader factory
+// CopyFromFilePassThru copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem.
+// Access copied bytes by providing a PassThru reader factory.
 func (a *Client) CopyFromFilePassThru(ctx context.Context, file os.File, remotePath string, permissions string, passThru PassThru) error {
-	stat, _ := file.Stat()
+	stat, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat file: %w", err)
+	}
 	return a.CopyPassThru(ctx, &file, remotePath, permissions, stat.Size(), passThru)
 }
 
-// Copies the contents of an io.Reader to a remote location, the length is determined by reading the io.Reader until EOF
-// if the file length in know in advance please use "Copy" instead
+// CopyFile copies the contents of an io.Reader to a remote location, the length is determined by reading the io.Reader until EOF
+// if the file length in know in advance please use "Copy" instead.
 func (a *Client) CopyFile(ctx context.Context, fileReader io.Reader, remotePath string, permissions string) error {
 	return a.CopyFilePassThru(ctx, fileReader, remotePath, permissions, nil)
 }
 
-// Copies the contents of an io.Reader to a remote location, the length is determined by reading the io.Reader until EOF
+// CopyFilePassThru copies the contents of an io.Reader to a remote location, the length is determined by reading the io.Reader until EOF
 // if the file length in know in advance please use "Copy" instead.
-// Access copied bytes by providing a PassThru reader factory
+// Access copied bytes by providing a PassThru reader factory.
 func (a *Client) CopyFilePassThru(ctx context.Context, fileReader io.Reader, remotePath string, permissions string, passThru PassThru) error {
-	contents_bytes, _ := ioutil.ReadAll(fileReader)
-	bytes_reader := bytes.NewReader(contents_bytes)
+	contentsBytes, err := ioutil.ReadAll(fileReader)
+	if err != nil {
+		return fmt.Errorf("failed to read all data from reader: %w", err)
+	}
+	bytesReader := bytes.NewReader(contentsBytes)
 
-	return a.CopyPassThru(ctx, bytes_reader, remotePath, permissions, int64(len(contents_bytes)), passThru)
+	return a.CopyPassThru(ctx, bytesReader, remotePath, permissions, int64(len(contentsBytes)), passThru)
 }
 
-// waitTimeout waits for the waitgroup for the specified max timeout.
+// wait waits for the waitgroup for the specified max timeout.
 // Returns true if waiting timed out.
 func wait(wg *sync.WaitGroup, ctx context.Context) error {
 	c := make(chan struct{})
@@ -108,8 +115,8 @@ func wait(wg *sync.WaitGroup, ctx context.Context) error {
 	}
 }
 
-// Checks the response it reads from the remote, and will return a single error in case
-// of failure
+// checkResponse checks the response it reads from the remote, and will return a single error in case
+// of failure.
 func checkResponse(r io.Reader) error {
 	response, err := ParseResponse(r)
 	if err != nil {
@@ -124,12 +131,12 @@ func checkResponse(r io.Reader) error {
 
 }
 
-// Copies the contents of an io.Reader to a remote location
+// Copy copies the contents of an io.Reader to a remote location.
 func (a *Client) Copy(ctx context.Context, r io.Reader, remotePath string, permissions string, size int64) error {
 	return a.CopyPassThru(ctx, r, remotePath, permissions, size, nil)
 }
 
-// Copies the contents of an io.Reader to a remote location.
+// CopyPassThru copies the contents of an io.Reader to a remote location.
 // Access copied bytes by providing a PassThru reader factory
 func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath string, permissions string, size int64, passThru PassThru) error {
 	stdout, err := a.Session.StdoutPipe()
@@ -215,14 +222,14 @@ func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath strin
 	return nil
 }
 
-// Copy a file from the remote to the local file given by the `file`
+// CopyFromRemote copies a file from the remote to the local file given by the `file`
 // parameter. Use `CopyFromRemotePassThru` if a more generic writer
 // is desired instead of writing directly to a file on the file system.?
 func (a *Client) CopyFromRemote(ctx context.Context, file *os.File, remotePath string) error {
 	return a.CopyFromRemotePassThru(ctx, file, remotePath, nil)
 }
 
-// Copy a file from the remote to the given writer. The passThru parameter can be used
+// CopyFromRemotePassThru copies a file from the remote to the given writer. The passThru parameter can be used
 // to keep track of progress and how many bytes that were download from the remote.
 // `passThru` can be set to nil to disable this behaviour.
 func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remotePath string, passThru PassThru) error {
