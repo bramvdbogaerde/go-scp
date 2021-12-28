@@ -7,8 +7,9 @@
 package scp
 
 import (
-	"golang.org/x/crypto/ssh"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // ClientConfigurer a struct containing all the configuration options
