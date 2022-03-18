@@ -277,6 +277,10 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 			errCh <- err
 			return
 		}
+		if res.IsFailure() {
+			errCh <- errors.New(res.GetMessage())
+			return
+		}
 
 		infos, err := res.ParseFileInfos()
 		if err != nil {
