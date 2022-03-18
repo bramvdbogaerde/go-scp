@@ -151,3 +151,22 @@ func TestContextCancelDownload(t *testing.T) {
 		t.Errorf("Expected a canceled error but transfer succeeded without error")
 	}
 }
+
+func TestDownloadBadLocalFilePermissions(t *testing.T) {
+	client := establishConnection(t)
+	defer client.Close()
+
+	// Create a file with local bad permissions
+	// This happens only on Linux
+	f, err := os.OpenFile("./tmp/output.txt", os.O_CREATE, 0644)
+	if err != nil {
+		t.Error("Couldn't open the output file", err.Error())
+	}
+	defer f.Close()
+
+	// This should not timeout and throw an error
+	err = client.CopyFromRemote(context.Background(), f, "/input/Exöt1ç download file.txt.txt")
+	if err == nil {
+		t.Errorf("Expected error thrown. Got nil")
+	}
+}
