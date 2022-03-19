@@ -75,7 +75,7 @@ func (r *Response) IsError() bool {
 
 // IsFailure returns true when the remote answered with a warning or an error.
 func (r *Response) IsFailure() bool {
-	return r.Type > 0
+	return r.IsWarning() || r.IsError()
 }
 
 // GetMessage returns the message the remote sent back.
