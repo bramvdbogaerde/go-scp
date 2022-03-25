@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 	"sync"
 	"time"
 
@@ -164,6 +165,11 @@ func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath strin
 		}
 
 		defer w.Close()
+
+		if _, err := strconv.Atoi(permissions); len(permissions) != 4 || err != nil {
+			errCh <- fmt.Errorf("permissions must be a 4 digit string. instead is %s", permissions)
+			return
+		}
 
 		_, err = fmt.Fprintln(w, "C"+permissions, size, filename)
 		if err != nil {
