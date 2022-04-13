@@ -241,11 +241,10 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 		var err error
 
 		defer func() {
-			if err != nil {
-				errCh <- err
-			}
-			errCh <- err
+			// We must unblock the go routine first as we block on reading the channel later
 			wg.Done()
+
+			errCh <- err
 		}()
 
 		r, err := a.Session.StdoutPipe()
@@ -276,6 +275,10 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 		res, err := ParseResponse(r)
 		if err != nil {
 			errCh <- err
+			return
+		}
+		if res.IsFailure() {
+			errCh <- errors.New(res.GetMessage())
 			return
 		}
 
@@ -323,9 +326,9 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 	if err := wait(&wg, ctx); err != nil {
 		return err
 	}
-
+	finalErr := <-errCh
 	close(errCh)
-	return <-errCh
+	return finalErr
 }
 
 func (a *Client) Close() {

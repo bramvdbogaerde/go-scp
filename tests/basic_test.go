@@ -94,7 +94,7 @@ func TestDownloadFile(t *testing.T) {
 	// If this test works for this, simpler files should not be a problem.
 	err = client.CopyFromRemote(context.Background(), f, "/input/Exöt1ç download file.txt.txt")
 	if err != nil {
-		t.Errorf("Copy failed from remote")
+		t.Errorf("Copy failed from remote: %s", err.Error())
 	}
 
 	content, err := ioutil.ReadFile("./tmp/output.txt")
@@ -149,5 +149,43 @@ func TestContextCancelDownload(t *testing.T) {
 	err := client.CopyFile(ctx, f, "/data/"+filename, "0777")
 	if err != context.Canceled {
 		t.Errorf("Expected a canceled error but transfer succeeded without error")
+	}
+}
+
+func TestDownloadBadLocalFilePermissions(t *testing.T) {
+	client := establishConnection(t)
+	defer client.Close()
+
+	// Create a file with local bad permissions
+	// This happens only on Linux
+	f, err := os.OpenFile("./tmp/output_bdf.txt", os.O_CREATE, 0644)
+	if err != nil {
+		t.Error("Couldn't open the output file", err.Error())
+	}
+	defer f.Close()
+
+	// This should not timeout and throw an error
+	err = client.CopyFromRemote(context.Background(), f, "/input/Exöt1ç download file.txt.txt")
+	if err == nil {
+		t.Errorf("Expected error thrown. Got nil")
+	}
+}
+
+func TestFileNotFound(t *testing.T) {
+	client := establishConnection(t)
+	defer client.Close()
+
+	f, err := os.OpenFile("./tmp/output_fnf.txt", os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		t.Error("Couldn't open the output file", err.Error())
+	}
+	// This should throw file not found on remote
+	err = client.CopyFromRemote(context.Background(), f, "/input/no_such_file.txt")
+	if err == nil {
+		t.Errorf("Expected error thrown. Got nil")
+	}
+	expected := "scp: /input/no_such_file.txt: No such file or directory\n"
+	if err.Error() != expected {
+		t.Errorf("Expected %v, got %v", expected, err.Error())
 	}
 }
