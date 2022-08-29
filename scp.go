@@ -27,19 +27,11 @@ func NewClientWithTimeout(host string, config *ssh.ClientConfig, timeout time.Du
 
 // NewClientBySSH returns a new scp.Client using an already existing established SSH connection.
 func NewClientBySSH(ssh *ssh.Client) (Client, error) {
-	session, err := ssh.NewSession()
-	if err != nil {
-		return Client{}, err
-	}
-	return NewConfigurer("", nil).Session(session).Create(), nil
+	return NewConfigurer("", nil).SSHClient(ssh).Create(), nil
 }
 
 // NewClientBySSHWithTimeout same as NewClientWithTimeout but uses an existing SSH client.
 // Deprecated: provide meaningful context to each "Copy*" function instead.
 func NewClientBySSHWithTimeout(ssh *ssh.Client, timeout time.Duration) (Client, error) {
-	session, err := ssh.NewSession()
-	if err != nil {
-		return Client{}, err
-	}
-	return NewConfigurer("", nil).Session(session).Timeout(timeout).Create(), nil
+	return NewConfigurer("", nil).SSHClient(ssh).Timeout(timeout).Create(), nil
 }

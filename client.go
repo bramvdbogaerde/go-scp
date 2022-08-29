@@ -30,11 +30,8 @@ type Client struct {
 	// ClientConfig the client config to use.
 	ClientConfig *ssh.ClientConfig
 
-	// Session stores the SSH session while the connection is running.
-	Session *ssh.Session
-
-	// Conn stores the SSH connection itself in order to close it after transfer.
-	Conn ssh.Conn
+	// ssh client
+	sshClient *ssh.Client
 
 	// Timeout the maximal amount of time to wait for a file transfer to complete.
 	// Deprecated: use context.Context for each function instead.
@@ -45,22 +42,17 @@ type Client struct {
 }
 
 // Connect connects to the remote SSH server, returns error if it couldn't establish a session to the SSH server.
-func (a *Client) Connect() error {
-	if a.Session != nil {
+func (a *Client) Connect() (err error) {
+	if a.sshClient != nil {
 		return nil
 	}
 
-	client, err := ssh.Dial("tcp", a.Host, a.ClientConfig)
+	a.sshClient, err = ssh.Dial("tcp", a.Host, a.ClientConfig)
 	if err != nil {
 		return err
 	}
 
-	a.Conn = client.Conn
-	a.Session, err = client.NewSession()
-	if err != nil {
-		return err
-	}
-	return nil
+	return
 }
 
 // CopyFromFile copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem.
@@ -139,7 +131,12 @@ func (a *Client) Copy(ctx context.Context, r io.Reader, remotePath string, permi
 // CopyPassThru copies the contents of an io.Reader to a remote location.
 // Access copied bytes by providing a PassThru reader factory
 func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath string, permissions string, size int64, passThru PassThru) error {
-	stdout, err := a.Session.StdoutPipe()
+	session, err := a.sshClient.NewSession()
+	if err != nil {
+		return err
+	}
+
+	stdout, err := session.StdoutPipe()
 	if err != nil {
 		return err
 	}
@@ -157,7 +154,7 @@ func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath strin
 
 	go func() {
 		defer wg.Done()
-		w, err := a.Session.StdinPipe()
+		w, err := session.StdinPipe()
 		if err != nil {
 			errCh <- err
 			return
@@ -196,7 +193,7 @@ func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath strin
 
 	go func() {
 		defer wg.Done()
-		err := a.Session.Run(fmt.Sprintf("%s -qt %q", a.RemoteBinary, remotePath))
+		err := session.Run(fmt.Sprintf("%s -qt %q", a.RemoteBinary, remotePath))
 		if err != nil {
 			errCh <- err
 			return
@@ -236,6 +233,11 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 	wg := sync.WaitGroup{}
 	errCh := make(chan error, 1)
 
+	session, err := a.sshClient.NewSession()
+	if err != nil {
+		return err
+	}
+
 	wg.Add(1)
 	go func() {
 		var err error
@@ -247,20 +249,20 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 			errCh <- err
 		}()
 
-		r, err := a.Session.StdoutPipe()
+		r, err := session.StdoutPipe()
 		if err != nil {
 			errCh <- err
 			return
 		}
 
-		in, err := a.Session.StdinPipe()
+		in, err := session.StdinPipe()
 		if err != nil {
 			errCh <- err
 			return
 		}
 		defer in.Close()
 
-		err = a.Session.Start(fmt.Sprintf("%s -f %q", a.RemoteBinary, remotePath))
+		err = session.Start(fmt.Sprintf("%s -f %q", a.RemoteBinary, remotePath))
 		if err != nil {
 			errCh <- err
 			return
@@ -310,7 +312,7 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 			return
 		}
 
-		err = a.Session.Wait()
+		err = session.Wait()
 		if err != nil {
 			errCh <- err
 			return
@@ -332,10 +334,7 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 }
 
 func (a *Client) Close() {
-	if a.Session != nil {
-		a.Session.Close()
-	}
-	if a.Conn != nil {
-		a.Conn.Close()
+	if a.sshClient != nil {
+		a.sshClient.Close()
 	}
 }
