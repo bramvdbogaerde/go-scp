@@ -30,6 +30,8 @@ type Client struct {
 	// ClientConfig the client config to use.
 	ClientConfig *ssh.ClientConfig
 
+	withSSHClient bool
+
 	// ssh client
 	sshClient *ssh.Client
 
@@ -333,7 +335,8 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 }
 
 func (a *Client) Close() {
-	if a.sshClient != nil {
+	if a.sshClient != nil && !a.withSSHClient {
 		a.sshClient.Close()
 	}
+	a.sshClient = nil
 }
