@@ -69,9 +69,10 @@ func connectSSH() *ssh.Client {
 
 func main() {
    sshClient := connectSSH()
+   defer sshClient.Close()
 
    // Create a new SCP client, note that this function might
-   // return an error, as a new SSH session is established using the existing connecton
+   // return an error, as a new SSH session is established using the existing connection
 
    client, err := scp.NewClientBySSH(sshClient)
    if err != nil {
