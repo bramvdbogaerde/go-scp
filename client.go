@@ -243,8 +243,6 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 		defer func() {
 			// We must unblock the go routine first as we block on reading the channel later
 			wg.Done()
-
-			errCh <- err
 		}()
 
 		r, err := a.Session.StdoutPipe()
