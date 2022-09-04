@@ -234,17 +234,18 @@ func (a *Client) CopyFromRemote(ctx context.Context, file *os.File, remotePath s
 // `passThru` can be set to nil to disable this behaviour.
 func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remotePath string, passThru PassThru) error {
 	wg := sync.WaitGroup{}
-	errCh := make(chan error, 1)
+	errCh := make(chan error, 4)
 
 	wg.Add(1)
 	go func() {
 		var err error
 
 		defer func() {
+			// NOTE: this might send an already sent error another time, but since we only receive opne, this is fine. On the "happy-path" of this function, the error will be `nil` therefore completing the "err<-errCh" at the bottom of the function.
+			errCh <- err
 			// We must unblock the go routine first as we block on reading the channel later
 			wg.Done()
 
-			errCh <- err
 		}()
 
 		r, err := a.Session.StdoutPipe()
