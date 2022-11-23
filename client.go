@@ -143,6 +143,11 @@ func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath strin
 	if err != nil {
 		return err
 	}
+	w, err := a.Session.StdinPipe()
+	if err != nil {
+		return err
+	}
+	defer w.Close()
 
 	if passThru != nil {
 		r = passThru(r, size)
@@ -157,12 +162,6 @@ func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath strin
 
 	go func() {
 		defer wg.Done()
-		w, err := a.Session.StdinPipe()
-		if err != nil {
-			errCh <- err
-			return
-		}
-
 		defer w.Close()
 
 		_, err = fmt.Fprintln(w, "C"+permissions, size, filename)
