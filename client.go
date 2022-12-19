@@ -147,7 +147,6 @@ func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath strin
 	if err != nil {
 		return err
 	}
-	defer w.Close()
 
 	if passThru != nil {
 		r = passThru(r, size)
