@@ -19,7 +19,7 @@ docker run -d \
 sleep 5
 
 echo "Running tests"
-go test
+go test -v 
 
 echo "Tearing down docker containers"
 docker stop go-scp-test
