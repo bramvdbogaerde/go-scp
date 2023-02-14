@@ -68,6 +68,69 @@ func TestCopy(t *testing.T) {
 	}
 }
 
+// TestCopy tests the basic functionality of copying a file to the remote
+// destination.
+//
+// It assumes that a Docker container is running an SSH server at port 2244
+// that is using password authentication. It also assumes that the directory
+// /data is writable within that container and is mapped to ./tmp/ within the
+// directory the test is run from.
+func TestCopyMultiple(t *testing.T) {
+	client := establishConnection(t)
+	defer client.Close()
+
+	// Open a file we can transfer to the remote container.
+	f, _ := os.Open("./data/upload_file.txt")
+	defer f.Close()
+
+	f2, _ := os.Open("./data/another_file.txt")
+	defer f2.Close()
+
+	// Create a file name with exotic characters and spaces in them.
+	// If this test works for this, simpler files should not be a problem.
+	filename := "Exöt1ç uploaded file.txt"
+	remoteFilename2 := "verywow.txt"
+
+	err := copyToRemote(&client, f, "/data/"+filename, "0777")
+	if err != nil {
+		t.Errorf("Error while copying file: %s", err)
+	}
+
+	err = copyToRemote(&client, f2, "/data/"+remoteFilename2, "0777")
+	if err != nil {
+		t.Errorf("Error while copying file: %s", err)
+	}
+
+	// Read what the receiver have written to disk.
+	content, err := ioutil.ReadFile("./tmp/" + filename)
+	if err != nil {
+		t.Errorf("Result file could not be read: %s", err)
+	}
+
+	// Read what the receiver have written to disk.
+	content2, err := ioutil.ReadFile("./tmp/" + remoteFilename2)
+	if err != nil {
+		t.Errorf("Result file could not be read: %s", err)
+	}
+
+	text := string(content)
+	expected := "It Works\n"
+	if strings.Compare(text, expected) != 0 {
+		t.Errorf("Got different text than expected, expected %q got, %q", expected, text)
+	}
+
+	text = string(content2)
+	expected = "Here is some stuff and things.\nEven another line.\n"
+	if strings.Compare(text, expected) != 0 {
+		t.Errorf("Got different text than expected, expected %q got, %q", expected, text)
+	}
+
+}
+
+func copyToRemote(client *scp.Client, file *os.File, remoteFilename, perm string) error {
+	return client.CopyFile(context.Background(), file, remoteFilename, "0777")
+}
+
 // TestDownloadFile tests the basic functionality of copying a file from the
 // remote destination.
 //
