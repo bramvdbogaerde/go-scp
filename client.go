@@ -134,7 +134,7 @@ func (a *Client) Copy(ctx context.Context, r io.Reader, remotePath string, permi
 func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath string, permissions string, size int64, passThru PassThru) error {
 	session, err := a.sshClient.NewSession()
 	if err != nil {
-		return fmt.Errorf("Error creating ssh session in copy: ", err)
+		return fmt.Errorf("Error creating ssh session in copy: %v", err)
 	}
 	defer session.Close()
 
@@ -233,7 +233,7 @@ func (a *Client) CopyFromRemote(ctx context.Context, file *os.File, remotePath s
 func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remotePath string, passThru PassThru) error {
 	session, err := a.sshClient.NewSession()
 	if err != nil {
-		return fmt.Errorf("Error creating ssh session in copy from remote: ", err)
+		return fmt.Errorf("Error creating ssh session in copy from remote: %v", err)
 	}
 	defer session.Close()
 

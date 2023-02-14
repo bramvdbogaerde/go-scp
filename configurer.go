@@ -20,6 +20,7 @@ type ClientConfigurer struct {
 	session      *ssh.Session
 	timeout      time.Duration
 	remoteBinary string
+	sshClient    *ssh.Client
 }
 
 // NewConfigurer creates a new client configurer.
@@ -64,9 +65,8 @@ func (c *ClientConfigurer) ClientConfig(config *ssh.ClientConfig) *ClientConfigu
 	return c
 }
 
-// Session alters the ssh.Session.
-func (c *ClientConfigurer) Session(session *ssh.Session) *ClientConfigurer {
-	c.session = session
+func (c *ClientConfigurer) SSHClient(sshClient *ssh.Client) *ClientConfigurer {
+	c.sshClient = sshClient
 	return c
 }
 
@@ -77,5 +77,6 @@ func (c *ClientConfigurer) Create() Client {
 		ClientConfig: c.clientConfig,
 		Timeout:      c.timeout,
 		RemoteBinary: c.remoteBinary,
+		sshClient:    c.sshClient,
 	}
 }
