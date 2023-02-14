@@ -30,11 +30,8 @@ type Client struct {
 	// ClientConfig the client config to use.
 	ClientConfig *ssh.ClientConfig
 
-	// Keep the ssh client around for generating new sessions on upload/download
+	// Keep the ssh client around for generating new sessions
 	sshClient *ssh.Client
-
-	// Conn stores the SSH connection itself in order to close it after transfer.
-	Conn ssh.Conn
 
 	// Timeout the maximal amount of time to wait for a file transfer to complete.
 	// Deprecated: use context.Context for each function instead.
@@ -52,7 +49,6 @@ func (a *Client) Connect() error {
 	}
 
 	a.sshClient = client
-	a.Conn = client.Conn
 	return nil
 }
 
@@ -134,7 +130,7 @@ func (a *Client) Copy(ctx context.Context, r io.Reader, remotePath string, permi
 func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath string, permissions string, size int64, passThru PassThru) error {
 	session, err := a.sshClient.NewSession()
 	if err != nil {
-		return fmt.Errorf("Error creating ssh session in copy: %v", err)
+		return fmt.Errorf("Error creating ssh session in copy to remote: %v", err)
 	}
 	defer session.Close()
 
@@ -337,7 +333,7 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 }
 
 func (a *Client) Close() {
-	if a.Conn != nil {
-		a.Conn.Close()
+	if a.sshClient != nil {
+		a.sshClient.Close()
 	}
 }
