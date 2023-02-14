@@ -75,34 +75,50 @@ func TestCopy(t *testing.T) {
 // that is using password authentication. It also assumes that the directory
 // /data is writable within that container and is mapped to ./tmp/ within the
 // directory the test is run from.
-func TestCopyMultiple(t *testing.T) {
+func TestMultipleUploadsAndDownloads(t *testing.T) {
 	client := establishConnection(t)
 	defer client.Close()
 
 	// Open a file we can transfer to the remote container.
-	f, _ := os.Open("./data/upload_file.txt")
-	defer f.Close()
+	f1, _ := os.Open("./data/upload_file.txt")
+	defer f1.Close()
 
 	f2, _ := os.Open("./data/another_file.txt")
 	defer f2.Close()
 
+	// Open files to be written too from downloads
+	f_download_1, _ := os.Create("./tmp/download_result_1")
+	defer f_download_1.Close()
+	f_download_2, _ := os.Create("./tmp/download_result_2")
+	defer f_download_2.Close()
+
 	// Create a file name with exotic characters and spaces in them.
 	// If this test works for this, simpler files should not be a problem.
-	filename := "Exöt1ç uploaded file.txt"
+	remoteFilename1 := "Exöt1ç uploaded file.txt"
 	remoteFilename2 := "verywow.txt"
 
-	err := copyToRemote(&client, f, "/data/"+filename, "0777")
+	err := upload(&client, f1, "/data/"+remoteFilename1, "0777")
 	if err != nil {
 		t.Errorf("Error while copying file: %s", err)
 	}
 
-	err = copyToRemote(&client, f2, "/data/"+remoteFilename2, "0777")
+	err = upload(&client, f2, "/data/"+remoteFilename2, "0777")
 	if err != nil {
 		t.Errorf("Error while copying file: %s", err)
+	}
+
+	err = download(&client, f_download_1, "/data/"+remoteFilename1)
+	if err != nil {
+		t.Errorf("Error while downloading file: %s", err)
+	}
+
+	err = download(&client, f_download_2, "/data/"+remoteFilename2)
+	if err != nil {
+		t.Errorf("Error while downloading file: %s", err)
 	}
 
 	// Read what the receiver have written to disk.
-	content, err := ioutil.ReadFile("./tmp/" + filename)
+	content, err := ioutil.ReadFile("./tmp/" + remoteFilename1)
 	if err != nil {
 		t.Errorf("Result file could not be read: %s", err)
 	}
@@ -113,22 +129,40 @@ func TestCopyMultiple(t *testing.T) {
 		t.Errorf("Result file could not be read: %s", err)
 	}
 
-	text := string(content)
+	download_result_1, _ := ioutil.ReadFile("./tmp/download_result_1")
+	download_result_2, _ := ioutil.ReadFile("./tmp/download_result_2")
+
+	text1 := string(content)
 	expected := "It Works\n"
-	if strings.Compare(text, expected) != 0 {
-		t.Errorf("Got different text than expected, expected %q got, %q", expected, text)
+	if strings.Compare(text1, expected) != 0 {
+		t.Errorf("Got different text than expected, expected %q got, %q", expected, text1)
 	}
 
-	text = string(content2)
+	text2 := string(content2)
 	expected = "Here is some stuff and things.\nEven another line.\n"
-	if strings.Compare(text, expected) != 0 {
-		t.Errorf("Got different text than expected, expected %q got, %q", expected, text)
+	if strings.Compare(text2, expected) != 0 {
+		t.Errorf("Got different text than expected, expected %q got, %q", expected, text2)
+	}
+
+	// Compare downloaded content to written content
+	download_result_1_content := string(download_result_1)
+	if strings.Compare(text1, download_result_1_content) != 0 {
+		t.Errorf("Downloaded result different from disk: %q %q", download_result_1_content, text1)
+	}
+
+	download_result_2_content := string(download_result_2)
+	if strings.Compare(text2, download_result_2_content) != 0 {
+		t.Errorf("Downloaded result different from disk: %q %q", download_result_2_content, text2)
 	}
 
 }
 
-func copyToRemote(client *scp.Client, file *os.File, remoteFilename, perm string) error {
+func upload(client *scp.Client, file *os.File, remoteFilename, perm string) error {
 	return client.CopyFile(context.Background(), file, remoteFilename, "0777")
+}
+
+func download(client *scp.Client, file *os.File, remotePath string) error {
+	return client.CopyFromRemote(context.Background(), file, remotePath)
 }
 
 // TestDownloadFile tests the basic functionality of copying a file from the
