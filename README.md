@@ -46,7 +46,7 @@ func main() {
 	// Close the file after it has been copied
 	defer f.Close()
 
-	// Finaly, copy the file over
+	// Finally, copy the file over
 	// Usage: CopyFromFile(context, file, remotePath, permission)
 
         // the context can be adjusted to provide time-outs or inherit from other contexts if this is embedded in a larger application.
