@@ -150,7 +150,7 @@ func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath strin
 
 	filename := path.Base(remotePath)
 
-	err = session.Run(fmt.Sprintf("%s -qt %q", a.RemoteBinary, remotePath))
+	err = session.Start(fmt.Sprintf("%s -qt %q", a.RemoteBinary, remotePath))
 	if err != nil {
 		return err
 	}
