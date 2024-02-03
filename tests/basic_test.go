@@ -2,7 +2,7 @@ package tests
 
 import (
 	"context"
-	"io/ioutil"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -13,16 +13,47 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// password | private key | private key with passphrase | ssh agent
+func buildClientConfig() (ssh.ClientConfig, error) {
+	method := os.Getenv("METHOD")
+	if method == "" {
+		method = "password"
+	}
+
+	var clientConfig ssh.ClientConfig
+	switch method {
+	case "password":
+		// Use SSH key authentication from the auth package.
+		// During testing we ignore the host key, don't do that when you use this.
+		config, _ := auth.PasswordKey("bram", "test", ssh.InsecureIgnoreHostKey())
+		return config, nil
+	case "private_key":
+		config, _ := auth.PrivateKey("bram", "./tmp/id_rsa", ssh.InsecureIgnoreHostKey())
+		return config, nil
+	case "private_key_with_passphrase":
+		config, _ := auth.PrivateKeyWithPassphrase(
+			"bram", []byte("passphrase"), "./tmp/id_rsa", ssh.InsecureIgnoreHostKey(),
+		)
+		return config, nil
+	case "ssh_agent":
+		config, _ := auth.SshAgent("bram", ssh.InsecureIgnoreHostKey())
+		return config, nil
+	}
+	return clientConfig, fmt.Errorf("Unknown method: %s", method)
+}
+
 func establishConnection(t *testing.T) scp.Client {
-	// Use SSH key authentication from the auth package.
-	// During testing we ignore the host key, don't to that when you use this.
-	clientConfig, _ := auth.PasswordKey("bram", "test", ssh.InsecureIgnoreHostKey())
+	// Build the client configuration.
+	clientConfig, err := buildClientConfig()
+	if err != nil {
+		t.Fatalf("Couldn't build the client configuration: %s", err)
+	}
 
 	// Create a new SCP client.
 	client := scp.NewClient("127.0.0.1:2244", &clientConfig)
 
 	// Connect to the remote server.
-	err := client.Connect()
+	err = client.Connect()
 	if err != nil {
 		t.Fatalf("Couldn't establish a connection to the remote server: %s", err)
 	}
@@ -56,7 +87,7 @@ func TestCopy(t *testing.T) {
 	}
 
 	// Read what the receiver have written to disk.
-	content, err := ioutil.ReadFile("./tmp/" + filename)
+	content, err := os.ReadFile("./tmp/" + filename)
 	if err != nil {
 		t.Errorf("Result file could not be read: %s", err)
 	}
@@ -118,19 +149,19 @@ func TestMultipleUploadsAndDownloads(t *testing.T) {
 	}
 
 	// Read what the receiver have written to disk.
-	content, err := ioutil.ReadFile("./tmp/" + remoteFilename1)
+	content, err := os.ReadFile("./tmp/" + remoteFilename1)
 	if err != nil {
 		t.Errorf("Result file could not be read: %s", err)
 	}
 
 	// Read what the receiver have written to disk.
-	content2, err := ioutil.ReadFile("./tmp/" + remoteFilename2)
+	content2, err := os.ReadFile("./tmp/" + remoteFilename2)
 	if err != nil {
 		t.Errorf("Result file could not be read: %s", err)
 	}
 
-	download_result_1, _ := ioutil.ReadFile("./tmp/download_result_1")
-	download_result_2, _ := ioutil.ReadFile("./tmp/download_result_2")
+	download_result_1, _ := os.ReadFile("./tmp/download_result_1")
+	download_result_2, _ := os.ReadFile("./tmp/download_result_2")
 
 	text1 := string(content)
 	expected := "It Works\n"
@@ -194,7 +225,7 @@ func TestDownloadFile(t *testing.T) {
 		t.Errorf("Copy failed from remote: %s", err.Error())
 	}
 
-	content, err := ioutil.ReadFile("./tmp/output.txt")
+	content, err := os.ReadFile("./tmp/output.txt")
 	if err != nil {
 		t.Errorf("Result file could not be read: %s", err)
 	}
