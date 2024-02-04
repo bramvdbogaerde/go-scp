@@ -2,6 +2,9 @@
 
 fix_permissions () {
    chmod -R 777 tmp/
+   if [ -f "tmp/id_rsa.pub" ] ; then
+      chmod 0600 tmp/id_rsa.pub
+   fi
 }
 
 cleanup() {
@@ -23,6 +26,7 @@ cleanup() {
 run_test() {
   local auth_method=$1
 
+  fix_permissions
   echo "Testing with auth method: $auth_method"
 
   echo "Running tests"
@@ -48,8 +52,13 @@ run_docker_container() {
     panubo/sshd
 }
 
-for auth_method in "password"; do # "private_key" "private_key_with_passphrase" "ssh_agent"; do
-  fix_permissions
+if [ -z "${GITHUB_ACTIONS}" ]; then
+   AUTH_METHODS="password private_key private_key_with_passphrase ssh_agent"
+else
+   AUTH_METHODS="password"
+fi
+
+for auth_method in $AUTH_METHODS ; do
   case "$auth_method" in
     "password")
       echo "Testing with password auth"
