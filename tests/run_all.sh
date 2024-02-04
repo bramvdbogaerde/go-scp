@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Fail the tests if any command fails
+set -e
+
 cleanup() {
   local auth_method=$1
 
