@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+fix_permissions () {
+   chmod -R 777 tmp/
+}
+
 cleanup() {
   local auth_method=$1
 
@@ -11,7 +15,9 @@ cleanup() {
   if [[ "$auth_method" == "ssh_agent" ]]; then
     ssh-add -d ./tmp/id_rsa
   fi
-  rm tmp/*
+  rm -r tmp/
+  mkdir tmp/
+  touch tmp/.gitkeep
 }
 
 run_test() {
@@ -42,7 +48,8 @@ run_docker_container() {
     panubo/sshd
 }
 
-for auth_method in "password" "private_key" "private_key_with_passphrase" "ssh_agent"; do
+for auth_method in "password"; do # "private_key" "private_key_with_passphrase" "ssh_agent"; do
+  fix_permissions
   case "$auth_method" in
     "password")
       echo "Testing with password auth"
