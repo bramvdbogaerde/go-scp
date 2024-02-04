@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-# Fail the tests if any command fails
-set -e
-
 cleanup() {
   local auth_method=$1
 
@@ -24,6 +21,10 @@ run_test() {
 
   echo "Running tests"
   METHOD="$auth_method" go test -v
+  if [ $? -ne 0 ]; then 
+     cleanup
+     exit 1
+  fi
 }
 
 run_docker_container() {
