@@ -150,19 +150,19 @@ func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath strin
 
 	filename := path.Base(remotePath)
 
-        // Start the command first and get confirmation that it has been started 
-        // before sending anything through the pipes.
-        err = session.Start(fmt.Sprintf("%s -qt %q", a.RemoteBinary, remotePath))
-        if err != nil {
-           return err 
-        }
+	// Start the command first and get confirmation that it has been started
+	// before sending anything through the pipes.
+	err = session.Start(fmt.Sprintf("%s -qt %q", a.RemoteBinary, remotePath))
+	if err != nil {
+		return err
+	}
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
 	errCh := make(chan error, 2)
 
-        // SCP protocol and file sending
+	// SCP protocol and file sending
 	go func() {
 		defer wg.Done()
 		defer w.Close()
@@ -196,7 +196,7 @@ func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath strin
 		}
 	}()
 
-        // Wait for the process to exit
+	// Wait for the process to exit
 	go func() {
 		defer wg.Done()
 		err := session.Wait()
@@ -206,21 +206,21 @@ func (a *Client) CopyPassThru(ctx context.Context, r io.Reader, remotePath strin
 		}
 	}()
 
-        // If there is a timeout, stop the transfer if it has been exceeded
+	// If there is a timeout, stop the transfer if it has been exceeded
 	if a.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, a.Timeout)
 		defer cancel()
 	}
 
-        // Wait for one of the conditions (error/timeout/completion) to occur
+	// Wait for one of the conditions (error/timeout/completion) to occur
 	if err := wait(&wg, ctx); err != nil {
 		return err
 	}
 
 	close(errCh)
 
-        // Collect any errors from the error channel
+	// Collect any errors from the error channel
 	for err := range errCh {
 		if err != nil {
 			return err
