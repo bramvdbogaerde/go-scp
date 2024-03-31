@@ -1,4 +1,4 @@
-/* Copyright (c) 2021 Bram Vandenbogaerde And Contributors
+/* Copyright (c) 2024 Bram Vandenbogaerde And Contributors
  * You may use, distribute or modify this code under the
  * terms of the Mozilla Public License 2.0, which is distributed
  * along with the source code.
@@ -21,6 +21,27 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// Callback for freeing managed resources
+type ICloseHandler interface {
+	Close()
+}
+
+// Close handler equivalent to a no-op. Used by default
+// when no resources have to be cleaned.
+type EmptyHandler struct{}
+
+func (EmptyHandler) Close() {}
+
+// Close handler to close an SSH client
+type CloseSSHCLient struct {
+	// Reference to the used SSH client
+	sshClient *ssh.Client
+}
+
+func (scp CloseSSHCLient) Close() {
+	scp.sshClient.Close()
+}
+
 type PassThru func(r io.Reader, total int64) io.Reader
 
 type Client struct {
@@ -39,6 +60,10 @@ type Client struct {
 
 	// RemoteBinary the absolute path to the remote SCP binary.
 	RemoteBinary string
+
+	// Handler called when calling `Close` to clean up any remaining
+	// resources managed by `Client`.
+	closeHandler ICloseHandler
 }
 
 // Connect connects to the remote SSH server, returns error if it couldn't establish a session to the SSH server.
@@ -49,7 +74,14 @@ func (a *Client) Connect() error {
 	}
 
 	a.sshClient = client
+	a.closeHandler = CloseSSHCLient{sshClient: client}
 	return nil
+}
+
+// Returns the underlying SSH client, this should be used carefully as
+// it will be closed by `client.Close`.
+func (a *Client) SSHClient() *ssh.Client {
+	return a.sshClient
 }
 
 // CopyFromFile copies the contents of an os.File to a remote location, it will get the length of the file by looking it up from the filesystem.
@@ -347,7 +379,5 @@ func (a *Client) CopyFromRemotePassThru(ctx context.Context, w io.Writer, remote
 }
 
 func (a *Client) Close() {
-	if a.sshClient != nil {
-		a.sshClient.Close()
-	}
+	a.closeHandler.Close()
 }

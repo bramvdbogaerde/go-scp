@@ -1,4 +1,4 @@
-package tests
+package scp
 
 import (
 	"context"
@@ -315,5 +315,77 @@ func TestFileNotFound(t *testing.T) {
 	expected := "scp: /input/no_such_file.txt: No such file or directory\n"
 	if err.Error() != expected {
 		t.Errorf("Expected %v, got %v", expected, err.Error())
+	}
+}
+
+func TestUserSuppliedSSHClientDoesNotClose(t *testing.T) {
+	// create the SSH connection
+	clientConfig, err := buildClientConfig()
+	if err != nil {
+		t.Error("Could not build client config", clientConfig)
+	}
+
+	sshClient, err := ssh.Dial("tcp", "127.0.0.1:2244", &clientConfig)
+	if err != nil {
+		t.Error("Could not establish SSH connection", err)
+	}
+	defer sshClient.Close()
+
+	// create the SCP client
+	client, err := scp.NewClientBySSH(sshClient)
+	if err != nil {
+		t.Error("Could not create SCP client", err)
+	}
+
+	// copy a file for good measure
+
+	f, _ := os.Open("./data/upload_file.txt")
+	defer f.Close()
+
+	err = client.CopyFile(context.Background(), f, "/data/test.txt", "0777")
+
+	if err != nil {
+		t.Error("Could not copy file to remote", err)
+	}
+
+	// then close the SCP client
+	client.Close()
+
+	var session *ssh.Session
+
+	// ensure that the SSH client is still opened
+	// we do so by creating a new session, if this fails
+	// the SSH connection was already closed
+	if session, err = sshClient.NewSession(); err != nil {
+		t.Fatal("SSH session was already closed.")
+	}
+
+	session.Close()
+}
+
+// Ensure that the underlying SSH client managed by the library is correctly closed
+// after closing the SCP connection
+func TestSSHClientNoLeak(t *testing.T) {
+	client := establishConnection(t)
+
+	// copy a file for good measure
+	f, _ := os.Open("./data/upload_file.txt")
+	defer f.Close()
+
+	err := client.CopyFile(context.Background(), f, "/data/test.txt", "0777")
+
+	if err != nil {
+		t.Error("Could not copy file to remote", err)
+	}
+
+	// then close the SCP client
+	client.Close()
+
+	// ensure that the SSH client is still opened
+	// we do so by creating a new session, if this fails
+	// the SSH connection was already closed
+	if session, err := client.SSHClient().NewSession(); err == nil {
+		session.Close()
+		t.Fatal("SSH session was not closed.")
 	}
 }

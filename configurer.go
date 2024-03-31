@@ -78,5 +78,6 @@ func (c *ClientConfigurer) Create() Client {
 		Timeout:      c.timeout,
 		RemoteBinary: c.remoteBinary,
 		sshClient:    c.sshClient,
+                closeHandler: EmptyHandler{},
 	}
 }
