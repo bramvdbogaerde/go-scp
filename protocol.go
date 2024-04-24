@@ -169,7 +169,7 @@ func (r *Response) ParseFileTime() (*FileInfos, error) {
 		return nil, errors.New("unable to parse Time protocol")
 	}
 
-	aTime, err := strconv.Atoi(string(parts[0][1:10]))
+	aTime, err := strconv.Atoi(string(parts[0][0:10]))
 	if err != nil {
 		return nil, errors.New("unable to parse ATime component of message")
 	}
