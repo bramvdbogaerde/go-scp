@@ -56,8 +56,9 @@ func ParseResponse(reader io.Reader) (Response, error) {
 	}
 
 	responseType := buffer[0]
+	runeResponseType := rune(buffer[0])
 	message := ""
-	if responseType > 0 {
+	if responseType > 0 && (runeResponseType == Chmod || runeResponseType == Time) {
 		bufferedReader := bufio.NewReader(reader)
 		message, err = bufferedReader.ReadString('\n')
 		if err != nil {
@@ -66,7 +67,7 @@ func ParseResponse(reader io.Reader) (Response, error) {
 	}
 
 	if len(message) > 0 {
-		return Response{responseType, message, rune(message[0])}, nil
+		return Response{responseType, message, runeResponseType}, nil
 	}
 
 	return Response{responseType, message, ' '}, nil
