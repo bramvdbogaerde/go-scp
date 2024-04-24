@@ -380,15 +380,31 @@ func (a *Client) CopyFromRemotePassThru(
 			return
 		}
 
+		fileInfo := NewFileInfos()
+
 		if res.IsTime() {
+			timeInfo, err := res.ParseFileTime()
+
+			if err != nil {
+				errCh <- err
+				return
+			}
+
+			fileInfo.Update(timeInfo)
+
 			res, err = ParseResponse(r)
 			if err != nil {
 				errCh <- err
 				return
 			}
 
-			if res.IsFailure() || res.NoStandardProtocolType() {
+			if res.IsFailure() {
 				errCh <- errors.New(res.GetMessage())
+				return
+			}
+
+			if res.NoStandardProtocolType() {
+				errCh <- errors.New(fmt.Sprintf("Input from server doesn't follow protocol: %s", res.GetMessage()))
 				return
 			}
 		}
@@ -400,6 +416,9 @@ func (a *Client) CopyFromRemotePassThru(
 		}
 
 		infos, err := res.ParseFileInfos()
+
+		fileInfo.Update(infos)
+
 		if err != nil {
 			errCh <- err
 			return

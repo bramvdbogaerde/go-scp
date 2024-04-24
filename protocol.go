@@ -117,6 +117,10 @@ type FileInfos struct {
 	Mtime       int64
 }
 
+func NewFileInfos() *FileInfos {
+	return &FileInfos{}
+}
+
 func (fileInfos *FileInfos) Update(new *FileInfos) {
 	if new == nil {
 		return
