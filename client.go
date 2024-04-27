@@ -9,7 +9,6 @@ package scp
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -168,13 +167,9 @@ func wait(wg *sync.WaitGroup, ctx context.Context) error {
 // checkResponse checks the response it reads from the remote, and will return a single error in case
 // of failure.
 func checkResponse(r io.Reader) error {
-	response, err := ParseResponse(r)
+	_, err := ParseResponse(r, nil)
 	if err != nil {
 		return err
-	}
-
-	if response.IsFailure() {
-		return errors.New(response.GetMessage())
 	}
 
 	return nil
@@ -366,59 +361,7 @@ func (a *Client) CopyFromRemotePassThru(
 			return
 		}
 
-		res, err := ParseResponse(r)
-		if err != nil {
-			errCh <- err
-			return
-		}
-		if res.IsFailure() {
-			errCh <- errors.New(res.GetMessage())
-			return
-		}
-		if res.NoStandardProtocolType() {
-			errCh <- errors.New(fmt.Sprintf("Input from server doesn't follow protocol: %s", res.GetMessage()))
-			return
-		}
-
-		fileInfo := NewFileInfos()
-
-		if res.IsTime() {
-			timeInfo, err := res.ParseFileTime()
-
-			if err != nil {
-				errCh <- err
-				return
-			}
-
-			fileInfo.Update(timeInfo)
-
-			res, err = ParseResponse(r)
-			if err != nil {
-				errCh <- err
-				return
-			}
-
-			if res.IsFailure() {
-				errCh <- errors.New(res.GetMessage())
-				return
-			}
-
-			if res.NoStandardProtocolType() {
-				errCh <- errors.New(fmt.Sprintf("Input from server doesn't follow protocol: %s", res.GetMessage()))
-				return
-			}
-		}
-
-		// The CHMOD message always comes before the actual data is being sent
-		if !res.IsChmod() {
-			errCh <- errors.New(fmt.Sprintf("The data did not contain the expected CHMOD information: %s", res.GetMessage()))
-			return
-		}
-
-		infos, err := res.ParseFileInfos()
-
-		fileInfo.Update(infos)
-
+		fileInfo, err := ParseResponse(r, in)
 		if err != nil {
 			errCh <- err
 			return
@@ -431,10 +374,10 @@ func (a *Client) CopyFromRemotePassThru(
 		}
 
 		if passThru != nil {
-			r = passThru(r, infos.Size)
+			r = passThru(r, fileInfo.Size)
 		}
 
-		_, err = CopyN(w, r, infos.Size)
+		_, err = CopyN(w, r, fileInfo.Size)
 		if err != nil {
 			errCh <- err
 			return
