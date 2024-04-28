@@ -45,9 +45,7 @@ func ParseResponse(reader io.Reader, writer io.Writer) (*FileInfos, error) {
 		}
 
 		if responseType == Warning || responseType == Error {
-			return fileInfos, errors.New(
-				fmt.Sprintf("Failed to execute command with a warning or error: %s", message),
-			)
+			return fileInfos, errors.New(message)
 		}
 
 		// Exit early because we're only interested in the ok response
