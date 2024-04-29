@@ -339,7 +339,7 @@ func (a *Client) CopyFromRemoteFileInfos(
 
 	wg := sync.WaitGroup{}
 	errCh := make(chan error, 4)
-	fileInfosCh := make(chan *FileInfos, 1)
+	fileInfosCh := make(chan *FileInfos, 4)
 
 	wg.Add(1)
 	go func() {
@@ -395,11 +395,12 @@ func (a *Client) CopyFromRemoteFileInfos(
 
 		if fileInfo != nil {
 			fileInfosCh <- fileInfo
+		} else {
+			fileInfosCh <- nil
 		}
 
 		err = Ack(in)
 		if err != nil {
-			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
@@ -410,21 +411,18 @@ func (a *Client) CopyFromRemoteFileInfos(
 
 		_, err = CopyN(w, r, fileInfo.Size)
 		if err != nil {
-			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
 		err = Ack(in)
 		if err != nil {
-			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
 		err = session.Wait()
 		if err != nil {
-			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
