@@ -355,12 +355,14 @@ func (a *Client) CopyFromRemoteFileInfos(
 
 		r, err := session.StdoutPipe()
 		if err != nil {
+			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
 		in, err := session.StdinPipe()
 		if err != nil {
+			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
@@ -372,26 +374,32 @@ func (a *Client) CopyFromRemoteFileInfos(
 			err = session.Start(fmt.Sprintf("%s -f %q", a.RemoteBinary, remotePath))
 		}
 		if err != nil {
+			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
 		err = Ack(in)
 		if err != nil {
+			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
 		fileInfo, err := ParseResponse(r, in)
 		if err != nil {
+			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
-		fileInfosCh <- fileInfo
+		if fileInfo != nil {
+			fileInfosCh <- fileInfo
+		}
 
 		err = Ack(in)
 		if err != nil {
+			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
@@ -402,18 +410,21 @@ func (a *Client) CopyFromRemoteFileInfos(
 
 		_, err = CopyN(w, r, fileInfo.Size)
 		if err != nil {
+			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
 		err = Ack(in)
 		if err != nil {
+			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
 		err = session.Wait()
 		if err != nil {
+			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
