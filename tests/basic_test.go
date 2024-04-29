@@ -60,6 +60,23 @@ func establishConnection(t *testing.T) scp.Client {
 	return client
 }
 
+func establishPreserveConnection(t *testing.T) scp.Client {
+	clientConfig, err := buildClientConfig()
+	if err != nil {
+		t.Fatalf("Couldn't build the client configuration: %s", err)
+	}
+
+	// Create a new SCP client.
+	client := scp.NewConfigurer("127.0.0.1:2244", &clientConfig).Preserve(true).Create()
+
+	// Connect to the remote server.
+	err = client.Connect()
+	if err != nil {
+		t.Fatalf("Couldn't establish a connection to the remote server: %s", err)
+	}
+	return client
+}
+
 // TestCopy tests the basic functionality of copying a file to the remote
 // destination.
 //
@@ -196,6 +213,17 @@ func download(client *scp.Client, file *os.File, remotePath string) error {
 	return client.CopyFromRemote(context.Background(), file, remotePath)
 }
 
+func downloadFileInfo(
+	client *scp.Client,
+	file *os.File,
+	remotePath string,
+) (*scp.FileInfos, error) {
+
+	fileInfos, err := client.CopyFromRemoteFileInfos(context.Background(), file, remotePath, nil)
+
+	return fileInfos, err
+}
+
 // TestDownloadFile tests the basic functionality of copying a file from the
 // remote destination.
 //
@@ -235,6 +263,53 @@ func TestDownloadFile(t *testing.T) {
 	if strings.Compare(text, expected) != 0 {
 		t.Errorf("Got different text than expected, expected %q got, %q", expected, text)
 	}
+}
+
+func TestDownloadFileInfo(t *testing.T) {
+	client := establishPreserveConnection(t)
+	defer client.Close()
+	f, _ := os.Open("./data/input.txt")
+	defer f.Close()
+
+	// Create a local file to write to.
+	f, err := os.OpenFile("./tmp/output.txt", os.O_RDWR|os.O_CREATE, 0777)
+	if err != nil {
+		t.Errorf("Couldn't open the output file")
+	}
+	defer f.Close()
+
+	// Use a file name with exotic characters and spaces in them.
+	// If this test works for this, simpler files should not be a problem.
+	fileInfos, err := client.CopyFromRemoteFileInfos(
+		context.Background(),
+		f,
+		"/input/Exöt1ç download file.txt.txt",
+		nil,
+	)
+	if err != nil {
+		t.Errorf("Copy failed from remote: %s", err.Error())
+	}
+
+	content, err := os.ReadFile("./tmp/output.txt")
+	if err != nil {
+		t.Errorf("Result file could not be read: %s", err)
+	}
+
+	text := string(content)
+	expected := "It works for download!\n"
+	if strings.Compare(text, expected) != 0 {
+		t.Errorf("Got different text than expected, expected %q got, %q", expected, text)
+	}
+
+	fileStat, err := os.Stat("./tmp/output.txt")
+	if err != nil {
+		t.Errorf("Result file could not be read: %s", err)
+	}
+
+	if fileStat.Size() != fileInfos.Size {
+		t.Errorf("File size does not match")
+	}
+
 }
 
 // TestTimeoutDownload tests that a timeout error is produced if the file is not copied in the given
