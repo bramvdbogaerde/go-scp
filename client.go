@@ -63,6 +63,9 @@ type Client struct {
 	// Handler called when calling `Close` to clean up any remaining
 	// resources managed by `Client`.
 	closeHandler ICloseHandler
+
+	// Preserve the remote file permissions, modification time and access time
+	preserve bool
 }
 
 // Connect connects to the remote SSH server, returns error if it couldn't establish a session to the SSH server.
@@ -315,14 +318,28 @@ func (a *Client) CopyFromRemotePassThru(
 	remotePath string,
 	passThru PassThru,
 ) error {
+	_, err := a.CopyFromRemoteFileInfos(ctx, w, remotePath, passThru)
+
+	return err
+}
+
+// CopyFroRemoteFileInfos copies a file from the remote to a given writer and return a FileInfos struct
+// containing information about the file such as permissions, the file size, modification time and access time
+func (a *Client) CopyFromRemoteFileInfos(
+	ctx context.Context,
+	w io.Writer,
+	remotePath string,
+	passThru PassThru,
+) (*FileInfos, error) {
 	session, err := a.sshClient.NewSession()
 	if err != nil {
-		return fmt.Errorf("Error creating ssh session in copy from remote: %v", err)
+		return nil, fmt.Errorf("Error creating ssh session in copy from remote: %v", err)
 	}
 	defer session.Close()
 
 	wg := sync.WaitGroup{}
 	errCh := make(chan error, 4)
+	fileInfosCh := make(chan *FileInfos, 1)
 
 	wg.Add(1)
 	go func() {
@@ -349,7 +366,11 @@ func (a *Client) CopyFromRemotePassThru(
 		}
 		defer in.Close()
 
-		err = session.Start(fmt.Sprintf("%s -f %q", a.RemoteBinary, remotePath))
+		if a.preserve {
+			err = session.Start(fmt.Sprintf("%s -pf %q", a.RemoteBinary, remotePath))
+		} else {
+			err = session.Start(fmt.Sprintf("%s -f %q", a.RemoteBinary, remotePath))
+		}
 		if err != nil {
 			errCh <- err
 			return
@@ -366,6 +387,8 @@ func (a *Client) CopyFromRemotePassThru(
 			errCh <- err
 			return
 		}
+
+		fileInfosCh <- fileInfo
 
 		err = Ack(in)
 		if err != nil {
@@ -403,11 +426,13 @@ func (a *Client) CopyFromRemotePassThru(
 	}
 
 	if err := wait(&wg, ctx); err != nil {
-		return err
+		return nil, err
 	}
+
 	finalErr := <-errCh
+	fileInfos := <-fileInfosCh
 	close(errCh)
-	return finalErr
+	return fileInfos, finalErr
 }
 
 func (a *Client) Close() {

@@ -68,20 +68,16 @@ func ParseResponse(reader io.Reader, writer io.Writer) (*FileInfos, error) {
 				return nil, err
 			}
 
-			message, err = bufferedReader.ReadString('\n')
-			if err == io.EOF {
+			if bufferedReader.Buffered() == 0 {
 				err = Ack(writer)
-				if err != nil {
-					return fileInfos, err
-				}
-				message, err = bufferedReader.ReadString('\n')
-
 				if err != nil {
 					return fileInfos, err
 				}
 			}
 
-			if err != nil && err != io.EOF {
+			message, err = bufferedReader.ReadString('\n')
+
+			if err != nil {
 				return fileInfos, err
 			}
 
