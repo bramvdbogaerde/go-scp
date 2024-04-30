@@ -235,10 +235,6 @@ func TestDownloadFile(t *testing.T) {
 	client := establishConnection(t)
 	defer client.Close()
 
-	// Open a file we can transfer to the remote container.
-	f, _ := os.Open("./data/input.txt")
-	defer f.Close()
-
 	// Create a local file to write to.
 	f, err := os.OpenFile("./tmp/output.txt", os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {

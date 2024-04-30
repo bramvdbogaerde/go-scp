@@ -136,7 +136,7 @@ func ParseFileInfos(message string, fileInfos *FileInfos) error {
 		return errors.New("unable to parse Chmod protocol")
 	}
 
-	permissions, err := strconv.ParseUint(parts[0][1:5], 0, 32)
+	permissions, err := strconv.ParseUint(parts[0][1:], 0, 32)
 	if err != nil {
 		return err
 	}
