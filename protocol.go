@@ -98,7 +98,7 @@ func ParseResponse(reader io.Reader, writer io.Writer) (*FileInfos, error) {
 type FileInfos struct {
 	Message     string
 	Filename    string
-	Permissions string
+	Permissions uint32
 	Size        int64
 	Atime       int64
 	Mtime       int64
@@ -115,7 +115,7 @@ func (fileInfos *FileInfos) Update(new *FileInfos) {
 	if new.Filename != "" {
 		fileInfos.Filename = new.Filename
 	}
-	if new.Permissions != "" {
+	if new.Permissions != 0 {
 		fileInfos.Permissions = new.Permissions
 	}
 	if new.Size != 0 {
@@ -136,6 +136,11 @@ func ParseFileInfos(message string, fileInfos *FileInfos) error {
 		return errors.New("unable to parse Chmod protocol")
 	}
 
+	permissions, err := strconv.ParseUint(parts[0][1:5], 0, 32)
+	if err != nil {
+		return err
+	}
+
 	size, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return err
@@ -143,7 +148,7 @@ func ParseFileInfos(message string, fileInfos *FileInfos) error {
 
 	fileInfos.Update(&FileInfos{
 		Filename:    parts[2],
-		Permissions: parts[0],
+		Permissions: uint32(permissions),
 		Size:        int64(size),
 	})
 
@@ -164,7 +169,7 @@ func ParseFileTime(
 	if err != nil {
 		return errors.New("unable to parse ATime component of message")
 	}
-	mTime, err := strconv.Atoi(string(parts[2][0:10]))
+	mTime, err := strconv.ParseUint(string(parts[2][0:10]), 0, 32)
 	if err != nil {
 		return errors.New("unable to parse MTime component of message")
 	}

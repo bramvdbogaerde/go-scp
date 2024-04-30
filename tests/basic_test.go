@@ -310,6 +310,18 @@ func TestDownloadFileInfo(t *testing.T) {
 		t.Errorf("File size does not match")
 	}
 
+	if fileInfos.Mtime == 0 {
+		t.Errorf("No file mtime preserved")
+	}
+
+	if fileInfos.Atime == 0 {
+		t.Errorf("No file atime preserved")
+	}
+
+	if fileInfos.Permissions == 0 {
+		t.Errorf("No file permissions preserved")
+	}
+
 }
 
 // TestTimeoutDownload tests that a timeout error is produced if the file is not copied in the given
