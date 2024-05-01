@@ -279,12 +279,20 @@ func TestDownloadFileInfo(t *testing.T) {
 		t.Errorf("File size does not match")
 	}
 
-	if fs.FileMode(fileInfos.Permissions) == fileStat.Mode().Perm() {
-		t.Errorf("File permissions don't match")
+	if fs.FileMode(fileInfos.Permissions) == fs.FileMode(0777) {
+		t.Errorf(
+			"File permissions don't match %s vs %s",
+			fs.FileMode(fileInfos.Permissions),
+			fileStat.Mode().Perm(),
+		)
 	}
 
 	if fileInfos.Mtime != fileStat.ModTime().Unix() {
-		t.Errorf("File modification time does not match")
+		t.Errorf(
+			"File modification time does not match %d vs %d",
+			fileInfos.Mtime,
+			fileStat.ModTime().Unix(),
+		)
 	}
 }
 
