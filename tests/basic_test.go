@@ -3,6 +3,7 @@ package scp
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 	"testing"
@@ -51,23 +52,6 @@ func establishConnection(t *testing.T) scp.Client {
 
 	// Create a new SCP client.
 	client := scp.NewClient("127.0.0.1:2244", &clientConfig)
-
-	// Connect to the remote server.
-	err = client.Connect()
-	if err != nil {
-		t.Fatalf("Couldn't establish a connection to the remote server: %s", err)
-	}
-	return client
-}
-
-func establishPreserveConnection(t *testing.T) scp.Client {
-	clientConfig, err := buildClientConfig()
-	if err != nil {
-		t.Fatalf("Couldn't build the client configuration: %s", err)
-	}
-
-	// Create a new SCP client.
-	client := scp.NewConfigurer("127.0.0.1:2244", &clientConfig).Preserve(true).Create()
 
 	// Connect to the remote server.
 	err = client.Connect()
@@ -213,17 +197,6 @@ func download(client *scp.Client, file *os.File, remotePath string) error {
 	return client.CopyFromRemote(context.Background(), file, remotePath)
 }
 
-func downloadFileInfo(
-	client *scp.Client,
-	file *os.File,
-	remotePath string,
-) (*scp.FileInfos, error) {
-
-	fileInfos, err := client.CopyFromRemoteFileInfos(context.Background(), file, remotePath, nil)
-
-	return fileInfos, err
-}
-
 // TestDownloadFile tests the basic functionality of copying a file from the
 // remote destination.
 //
@@ -262,7 +235,7 @@ func TestDownloadFile(t *testing.T) {
 }
 
 func TestDownloadFileInfo(t *testing.T) {
-	client := establishPreserveConnection(t)
+	client := establishConnection(t)
 	defer client.Close()
 	f, _ := os.Open("./data/input.txt")
 	defer f.Close()
@@ -297,27 +270,22 @@ func TestDownloadFileInfo(t *testing.T) {
 		t.Errorf("Got different text than expected, expected %q got, %q", expected, text)
 	}
 
-	fileStat, err := os.Stat("./tmp/output.txt")
+	fileStat, err := os.Stat("/input/Exöt1ç download file.txt.txt")
 	if err != nil {
 		t.Errorf("Result file could not be read: %s", err)
 	}
 
-	if fileStat.Size() != fileInfos.Size {
+	if fileInfos.Size != fileStat.Size() {
 		t.Errorf("File size does not match")
 	}
 
-	if fileInfos.Mtime == 0 {
-		t.Errorf("No file mtime preserved")
+	if fs.FileMode(fileInfos.Permissions) == fileStat.Mode().Perm() {
+		t.Errorf("File permissions don't match")
 	}
 
-	if fileInfos.Atime == 0 {
-		t.Errorf("No file atime preserved")
+	if fileInfos.Mtime != fileStat.ModTime().Unix() {
+		t.Errorf("File modification time does not match")
 	}
-
-	if fileInfos.Permissions == 0 {
-		t.Errorf("No file permissions preserved")
-	}
-
 }
 
 // TestTimeoutDownload tests that a timeout error is produced if the file is not copied in the given

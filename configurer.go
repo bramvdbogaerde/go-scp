@@ -21,7 +21,6 @@ type ClientConfigurer struct {
 	timeout      time.Duration
 	remoteBinary string
 	sshClient    *ssh.Client
-	preserve     bool
 }
 
 // NewConfigurer creates a new client configurer.
@@ -37,7 +36,6 @@ func NewConfigurer(host string, config *ssh.ClientConfig) *ClientConfigurer {
 		clientConfig: config,
 		timeout:      0, // no timeout by default
 		remoteBinary: "scp",
-		preserve:     false,
 	}
 }
 
@@ -72,13 +70,6 @@ func (c *ClientConfigurer) SSHClient(sshClient *ssh.Client) *ClientConfigurer {
 	return c
 }
 
-// Preserve alters the preserve flag
-// Defaults to false
-func (c *ClientConfigurer) Preserve(preserve bool) *ClientConfigurer {
-	c.preserve = preserve
-	return c
-}
-
 // Create builds a client with the configuration stored within the ClientConfigurer.
 func (c *ClientConfigurer) Create() Client {
 	return Client{
@@ -87,7 +78,6 @@ func (c *ClientConfigurer) Create() Client {
 		Timeout:      c.timeout,
 		RemoteBinary: c.remoteBinary,
 		sshClient:    c.sshClient,
-		preserve:     c.preserve,
 		closeHandler: EmptyHandler{},
 	}
 }

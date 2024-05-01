@@ -63,9 +63,6 @@ type Client struct {
 	// Handler called when calling `Close` to clean up any remaining
 	// resources managed by `Client`.
 	closeHandler ICloseHandler
-
-	// Preserve the remote file permissions, modification time and access time
-	preserve bool
 }
 
 // Connect connects to the remote SSH server, returns error if it couldn't establish a session to the SSH server.
@@ -318,7 +315,7 @@ func (a *Client) CopyFromRemotePassThru(
 	remotePath string,
 	passThru PassThru,
 ) error {
-	_, err := a.CopyFromRemoteFileInfos(ctx, w, remotePath, passThru)
+	_, err := a.copyFromRemoteFunctionality(ctx, w, remotePath, passThru, false)
 
 	return err
 }
@@ -331,6 +328,16 @@ func (a *Client) CopyFromRemoteFileInfos(
 	remotePath string,
 	passThru PassThru,
 ) (*FileInfos, error) {
+	return a.copyFromRemoteFunctionality(ctx, w, remotePath, passThru, true)
+}
+
+func (a *Client) copyFromRemoteFunctionality(
+	ctx context.Context,
+	w io.Writer,
+	remotePath string,
+	passThru PassThru,
+	preserveFileTimes bool,
+) (*FileInfos, error) {
 	session, err := a.sshClient.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("Error creating ssh session in copy from remote: %v", err)
@@ -339,7 +346,7 @@ func (a *Client) CopyFromRemoteFileInfos(
 
 	wg := sync.WaitGroup{}
 	errCh := make(chan error, 4)
-	fileInfosCh := make(chan *FileInfos, 4)
+	var fileInfos *FileInfos
 
 	wg.Add(1)
 	go func() {
@@ -355,49 +362,40 @@ func (a *Client) CopyFromRemoteFileInfos(
 
 		r, err := session.StdoutPipe()
 		if err != nil {
-			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
 		in, err := session.StdinPipe()
 		if err != nil {
-			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 		defer in.Close()
 
-		if a.preserve {
+		if preserveFileTimes {
 			err = session.Start(fmt.Sprintf("%s -pf %q", a.RemoteBinary, remotePath))
 		} else {
 			err = session.Start(fmt.Sprintf("%s -f %q", a.RemoteBinary, remotePath))
 		}
 		if err != nil {
-			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
 		err = Ack(in)
 		if err != nil {
-			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
 		fileInfo, err := ParseResponse(r, in)
 		if err != nil {
-			fileInfosCh <- nil
 			errCh <- err
 			return
 		}
 
-		if fileInfo != nil {
-			fileInfosCh <- fileInfo
-		} else {
-			fileInfosCh <- nil
-		}
+		fileInfos = fileInfo
 
 		err = Ack(in)
 		if err != nil {
@@ -439,7 +437,6 @@ func (a *Client) CopyFromRemoteFileInfos(
 	}
 
 	finalErr := <-errCh
-	fileInfos := <-fileInfosCh
 	close(errCh)
 	return fileInfos, finalErr
 }

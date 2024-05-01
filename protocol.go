@@ -68,6 +68,9 @@ func ParseResponse(reader io.Reader, writer io.Writer) (*FileInfos, error) {
 				return nil, err
 			}
 
+			// A custom ssh server can send both time, permissions and size information at once
+			// without needing an Ack response. Example: wish from charmbracelet while using their default scp implementation
+			// If the buffer is empty, then it's likely the default implementation for ssh, so send Ack
 			if bufferedReader.Buffered() == 0 {
 				err = Ack(writer)
 				if err != nil {
@@ -165,11 +168,18 @@ func ParseFileTime(
 		return errors.New("unable to parse Time protocol")
 	}
 
-	aTime, err := strconv.Atoi(string(parts[0][0:10]))
+	if len(parts[0]) != 10 {
+		return errors.New("length of ATime is not 10")
+	}
+	mTime, err := strconv.Atoi(parts[0][0:10])
 	if err != nil {
 		return errors.New("unable to parse ATime component of message")
 	}
-	mTime, err := strconv.ParseUint(string(parts[2][0:10]), 0, 32)
+
+	if len(parts[2]) != 10 {
+		return errors.New("length of MTime is not 10")
+	}
+	aTime, err := strconv.Atoi(parts[2][0:10])
 	if err != nil {
 		return errors.New("unable to parse MTime component of message")
 	}
