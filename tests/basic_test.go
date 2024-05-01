@@ -270,7 +270,7 @@ func TestDownloadFileInfo(t *testing.T) {
 		t.Errorf("Got different text than expected, expected %q got, %q", expected, text)
 	}
 
-	fileStat, err := os.Stat("/input/Exöt1ç download file.txt.txt")
+	fileStat, err := os.Stat("./data/Exöt1ç download file.txt.txt")
 	if err != nil {
 		t.Errorf("Result file could not be read: %s", err)
 	}
