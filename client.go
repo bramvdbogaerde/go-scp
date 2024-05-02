@@ -315,7 +315,7 @@ func (a *Client) CopyFromRemotePassThru(
 	remotePath string,
 	passThru PassThru,
 ) error {
-	_, err := a.copyFromRemoteFunctionality(ctx, w, remotePath, passThru, false)
+	_, err := a.copyFromRemote(ctx, w, remotePath, passThru, false)
 
 	return err
 }
@@ -328,10 +328,10 @@ func (a *Client) CopyFromRemoteFileInfos(
 	remotePath string,
 	passThru PassThru,
 ) (*FileInfos, error) {
-	return a.copyFromRemoteFunctionality(ctx, w, remotePath, passThru, true)
+	return a.copyFromRemote(ctx, w, remotePath, passThru, true)
 }
 
-func (a *Client) copyFromRemoteFunctionality(
+func (a *Client) copyFromRemote(
 	ctx context.Context,
 	w io.Writer,
 	remotePath string,
