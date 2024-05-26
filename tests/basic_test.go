@@ -236,11 +236,9 @@ func TestDownloadFile(t *testing.T) {
 
 func TestDownloadFileInfo(t *testing.T) {
 	client := establishConnection(t)
-	defer client.Close()
-	f, _ := os.Open("./data/input.txt")
-	defer f.Close()
+        defer client.Close()
 
-	// Create a local file to write to.
+	// Create a local file to write the remote file to.
 	f, err := os.OpenFile("./tmp/output.txt", os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		t.Errorf("Couldn't open the output file")
@@ -279,7 +277,7 @@ func TestDownloadFileInfo(t *testing.T) {
 		t.Errorf("File size does not match")
 	}
 
-	if fs.FileMode(fileInfos.Permissions) == fs.FileMode(0777) {
+	if fs.FileMode(fileInfos.Permissions) != fileStat.Mode() {
 		t.Errorf(
 			"File permissions don't match %s vs %s",
 			fs.FileMode(fileInfos.Permissions),

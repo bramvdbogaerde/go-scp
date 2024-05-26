@@ -301,7 +301,7 @@ func (a *Client) CopyPassThru(
 
 // CopyFromRemote copies a file from the remote to the local file given by the `file`
 // parameter. Use `CopyFromRemotePassThru` if a more generic writer
-// is desired instead of writing directly to a file on the file system.?
+// is desired instead of writing directly to a file on the file system.
 func (a *Client) CopyFromRemote(ctx context.Context, file *os.File, remotePath string) error {
 	return a.CopyFromRemotePassThru(ctx, file, remotePath, nil)
 }
@@ -353,7 +353,7 @@ func (a *Client) copyFromRemote(
 		var err error
 
 		defer func() {
-			// NOTE: this might send an already sent error another time, but since we only receive opne, this is fine. On the "happy-path" of this function, the error will be `nil` therefore completing the "err<-errCh" at the bottom of the function.
+			// NOTE: this might send an already sent error another time, but since we only receive one, this is fine. On the "happy-path" of this function, the error will be `nil` therefore completing the "err<-errCh" at the bottom of the function.
 			errCh <- err
 			// We must unblock the go routine first as we block on reading the channel later
 			wg.Done()
