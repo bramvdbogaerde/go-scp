@@ -68,20 +68,19 @@ func ParseResponse(reader io.Reader, writer io.Writer) (*FileInfos, error) {
 				return nil, err
 			}
 
-			message, err = bufferedReader.ReadString('\n')
-			if err == io.EOF {
+			// A custom ssh server can send both time, permissions and size information at once
+			// without needing an Ack response. Example: wish from charmbracelet while using their default scp implementation
+			// If the buffer is empty, then it's likely the default implementation for ssh, so send Ack
+			if bufferedReader.Buffered() == 0 {
 				err = Ack(writer)
-				if err != nil {
-					return fileInfos, err
-				}
-				message, err = bufferedReader.ReadString('\n')
-
 				if err != nil {
 					return fileInfos, err
 				}
 			}
 
-			if err != nil && err != io.EOF {
+			message, err = bufferedReader.ReadString('\n')
+
+			if err != nil {
 				return fileInfos, err
 			}
 
@@ -102,7 +101,7 @@ func ParseResponse(reader io.Reader, writer io.Writer) (*FileInfos, error) {
 type FileInfos struct {
 	Message     string
 	Filename    string
-	Permissions string
+	Permissions uint32
 	Size        int64
 	Atime       int64
 	Mtime       int64
@@ -119,7 +118,7 @@ func (fileInfos *FileInfos) Update(new *FileInfos) {
 	if new.Filename != "" {
 		fileInfos.Filename = new.Filename
 	}
-	if new.Permissions != "" {
+	if new.Permissions != 0 {
 		fileInfos.Permissions = new.Permissions
 	}
 	if new.Size != 0 {
@@ -140,6 +139,11 @@ func ParseFileInfos(message string, fileInfos *FileInfos) error {
 		return errors.New("unable to parse Chmod protocol")
 	}
 
+	permissions, err := strconv.ParseUint(parts[0][1:], 0, 32)
+	if err != nil {
+		return err
+	}
+
 	size, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return err
@@ -147,7 +151,7 @@ func ParseFileInfos(message string, fileInfos *FileInfos) error {
 
 	fileInfos.Update(&FileInfos{
 		Filename:    parts[2],
-		Permissions: parts[0],
+		Permissions: uint32(permissions),
 		Size:        int64(size),
 	})
 
@@ -164,11 +168,18 @@ func ParseFileTime(
 		return errors.New("unable to parse Time protocol")
 	}
 
-	aTime, err := strconv.Atoi(string(parts[0][0:10]))
+	if len(parts[0]) != 10 {
+		return errors.New("length of ATime is not 10")
+	}
+	mTime, err := strconv.Atoi(parts[0][0:10])
 	if err != nil {
 		return errors.New("unable to parse ATime component of message")
 	}
-	mTime, err := strconv.Atoi(string(parts[2][0:10]))
+
+	if len(parts[2]) != 10 {
+		return errors.New("length of MTime is not 10")
+	}
+	aTime, err := strconv.Atoi(parts[2][0:10])
 	if err != nil {
 		return errors.New("unable to parse MTime component of message")
 	}

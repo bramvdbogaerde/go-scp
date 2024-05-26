@@ -3,6 +3,7 @@ package scp
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 	"testing"
@@ -207,10 +208,6 @@ func TestDownloadFile(t *testing.T) {
 	client := establishConnection(t)
 	defer client.Close()
 
-	// Open a file we can transfer to the remote container.
-	f, _ := os.Open("./data/input.txt")
-	defer f.Close()
-
 	// Create a local file to write to.
 	f, err := os.OpenFile("./tmp/output.txt", os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
@@ -234,6 +231,68 @@ func TestDownloadFile(t *testing.T) {
 	expected := "It works for download!\n"
 	if strings.Compare(text, expected) != 0 {
 		t.Errorf("Got different text than expected, expected %q got, %q", expected, text)
+	}
+}
+
+func TestDownloadFileInfo(t *testing.T) {
+	client := establishConnection(t)
+	defer client.Close()
+	f, _ := os.Open("./data/input.txt")
+	defer f.Close()
+
+	// Create a local file to write to.
+	f, err := os.OpenFile("./tmp/output.txt", os.O_RDWR|os.O_CREATE, 0777)
+	if err != nil {
+		t.Errorf("Couldn't open the output file")
+	}
+	defer f.Close()
+
+	// Use a file name with exotic characters and spaces in them.
+	// If this test works for this, simpler files should not be a problem.
+	fileInfos, err := client.CopyFromRemoteFileInfos(
+		context.Background(),
+		f,
+		"/input/Exöt1ç download file.txt.txt",
+		nil,
+	)
+	if err != nil {
+		t.Errorf("Copy failed from remote: %s", err.Error())
+	}
+
+	content, err := os.ReadFile("./tmp/output.txt")
+	if err != nil {
+		t.Errorf("Result file could not be read: %s", err)
+	}
+
+	text := string(content)
+	expected := "It works for download!\n"
+	if strings.Compare(text, expected) != 0 {
+		t.Errorf("Got different text than expected, expected %q got, %q", expected, text)
+	}
+
+	fileStat, err := os.Stat("./data/Exöt1ç download file.txt.txt")
+	if err != nil {
+		t.Errorf("Result file could not be read: %s", err)
+	}
+
+	if fileInfos.Size != fileStat.Size() {
+		t.Errorf("File size does not match")
+	}
+
+	if fs.FileMode(fileInfos.Permissions) == fs.FileMode(0777) {
+		t.Errorf(
+			"File permissions don't match %s vs %s",
+			fs.FileMode(fileInfos.Permissions),
+			fileStat.Mode().Perm(),
+		)
+	}
+
+	if fileInfos.Mtime != fileStat.ModTime().Unix() {
+		t.Errorf(
+			"File modification time does not match %d vs %d",
+			fileInfos.Mtime,
+			fileStat.ModTime().Unix(),
+		)
 	}
 }
 
