@@ -144,7 +144,7 @@ func ParseFileInfos(message string, fileInfos *FileInfos) error {
 		return err
 	}
 
-	size, err := strconv.Atoi(parts[1])
+	size, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
 		return err
 	}
