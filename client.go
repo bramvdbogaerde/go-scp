@@ -67,6 +67,9 @@ type Client struct {
 
 // Connect connects to the remote SSH server, returns error if it couldn't establish a session to the SSH server.
 func (a *Client) Connect() error {
+	if a.ClientConfig == nil {
+		return fmt.Errorf("clientConfig of scp client is nil")
+	}
 	client, err := ssh.Dial("tcp", a.Host, a.ClientConfig)
 	if err != nil {
 		return err
